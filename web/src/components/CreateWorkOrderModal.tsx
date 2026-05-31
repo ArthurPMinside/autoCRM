@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, Loader2, User, Car, Wrench, Search, Plus } from 'lucide-react'
+import { X, Loader2, User, Car, Wrench, Search, Plus, Megaphone } from 'lucide-react'
 import { workOrdersApi } from '../api/workOrders'
 import { clientsApi } from '../api/clients'
 import { vehiclesApi } from '../api/vehicles'
@@ -21,6 +21,7 @@ export default function CreateWorkOrderModal({ onClose, initialDate }: Props) {
   const [serviceId, setServiceId] = useState('')
   const [description, setDescription] = useState('')
   const [scheduledDate, setScheduledDate] = useState(initialDate || '')
+  const [source, setSource] = useState('direct')
   const [searchClient, setSearchClient] = useState('')
   const [showNewClient, setShowNewClient] = useState(false)
   const [newClient, setNewClient] = useState({ name: '', phone: '', email: '' })
@@ -108,6 +109,7 @@ export default function CreateWorkOrderModal({ onClose, initialDate }: Props) {
       description,
       scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
       status: 'pending',
+      source,
     })
   }
 
@@ -285,6 +287,36 @@ export default function CreateWorkOrderModal({ onClose, initialDate }: Props) {
               onChange={(e) => setScheduledDate(e.target.value)}
               className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
             />
+          </div>
+
+          {/* Source */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <span className="flex items-center gap-1">
+                <Megaphone className="w-3.5 h-3.5" />
+                Источник
+              </span>
+            </label>
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+            >
+              <option value="direct">Прямое обращение</option>
+              <option value="repeat">Повторный визит</option>
+              <option value="yandex">Яндекс</option>
+              <option value="google">Google</option>
+              <option value="avito">Авито</option>
+              <option value="instagram">Instagram</option>
+              <option value="telegram">Telegram</option>
+              <option value="referral">Рекомендация</option>
+              <option value="other">Другое</option>
+            </select>
+            {source === 'repeat' && (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                Не засчитывается в маркетинговый бюджет
+              </p>
+            )}
           </div>
 
           {/* Description */}

@@ -18,6 +18,7 @@ class WorkOrderCreate(BaseModel):
     description: Optional[str] = None
     scheduled_date: Optional[str] = None
     status: Optional[str] = "pending"
+    source: Optional[str] = "direct"
 
 class WorkOrderUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -27,6 +28,7 @@ class WorkOrderUpdate(BaseModel):
     description: Optional[str] = None
     scheduled_date: Optional[str] = None
     status: Optional[str] = None
+    source: Optional[str] = None
 
 class WorkOrderResponse(BaseModel):
     id: str
@@ -37,6 +39,7 @@ class WorkOrderResponse(BaseModel):
     status: str
     total_cost: float
     description: Optional[str]
+    source: Optional[str]
     scheduled_date: Optional[str]
     created_at: str
     
@@ -60,6 +63,7 @@ def get_work_orders(db: Session = Depends(get_db)):
             status=order.status,
             total_cost=float(order.total_cost or 0),
             description=order.description,
+            source=order.source,
             scheduled_date=order.scheduled_date.replace(tzinfo=timezone.utc).isoformat() if order.scheduled_date else None,
             created_at=order.created_at.replace(tzinfo=timezone.utc).isoformat(),
         ))
@@ -85,6 +89,7 @@ def create_work_order(data: WorkOrderCreate, db: Session = Depends(get_db)):
         scheduled_date=scheduled,
         status=data.status or "pending",
         total_cost=total_cost,
+        source=data.source or "direct",
     )
     db.add(order)
     
@@ -107,6 +112,7 @@ def create_work_order(data: WorkOrderCreate, db: Session = Depends(get_db)):
         status=order.status,
         total_cost=float(order.total_cost or 0),
         description=order.description,
+        source=order.source,
         scheduled_date=order.scheduled_date.isoformat() if order.scheduled_date else None,
         created_at=order.created_at.isoformat(),
     )
@@ -135,6 +141,8 @@ def update_work_order(order_id: str, data: WorkOrderUpdate, db: Session = Depend
         order.status = data.status
         if order.status == "completed":
             order.completed_date = datetime.utcnow()
+    if data.source is not None:
+        order.source = data.source
     if data.scheduled_date is not None:
         if data.scheduled_date == "":
             order.scheduled_date = None
@@ -160,6 +168,7 @@ def update_work_order(order_id: str, data: WorkOrderUpdate, db: Session = Depend
         status=order.status,
         total_cost=float(order.total_cost or 0),
         description=order.description,
+        source=order.source,
         scheduled_date=order.scheduled_date.isoformat() if order.scheduled_date else None,
         created_at=order.created_at.isoformat(),
     )

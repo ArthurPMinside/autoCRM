@@ -13,6 +13,7 @@ class WorkOrder(Base):
     status = Column(String(20), default="pending")
     total_cost = Column(Numeric(10, 2), default=0)
     description = Column(Text)
+    source = Column(String(30), default="direct")
     scheduled_date = Column(DateTime)
     completed_date = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
