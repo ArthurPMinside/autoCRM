@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, ForeignKey, Numeric, Text, Enum
 
-from app.db.database import Base, GUID
+from app.models.base import Base, GUID
 import enum
 
 
@@ -15,9 +15,9 @@ class PaymentType(str, enum.Enum):
 class Payment(Base):
     __tablename__ = "payments"
 
-    id = Column(GUID, primary_key=True, default=uuid.uuid4)
-    work_order_id = Column(GUID, ForeignKey("work_orders.id"), nullable=True, index=True)
-    client_id = Column(GUID, ForeignKey("clients.id"), nullable=True)
+    id = GUID()
+    work_order_id = Column(String(36), ForeignKey("work_orders.id"), nullable=True, index=True)
+    client_id = Column(String(36), ForeignKey("clients.id"), nullable=True)
     amount = Column(Numeric(12, 2), nullable=False)
     payment_type = Column(Enum(PaymentType), default=PaymentType.CASH, nullable=False)
     description = Column(Text, nullable=True)
@@ -36,7 +36,7 @@ class ExpenseCategory(str, enum.Enum):
 class Expense(Base):
     __tablename__ = "expenses"
 
-    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    id = GUID()
     category = Column(Enum(ExpenseCategory), nullable=False)
     amount = Column(Numeric(12, 2), nullable=False)
     description = Column(Text, nullable=True)
