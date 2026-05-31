@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, clients, vehicles, services, work_orders, finance, warehouse, analytics, dashboard
+from app.api.v1 import auth, clients, vehicles, services, work_orders, finance, warehouse, analytics, dashboard, staff, sms, receipts, telegram
 from app.db.database import engine, Base
 import uvicorn
 
 app = FastAPI(
     title="autoCRM API",
     description="CRM для автосервисов",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 app.add_middleware(
@@ -29,10 +29,14 @@ app.include_router(finance.router, prefix="/api/v1/finance", tags=["finance"])
 app.include_router(warehouse.router, prefix="/api/v1/warehouse", tags=["warehouse"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
+app.include_router(staff.router, prefix="/api/v1/staff", tags=["staff"])
+app.include_router(sms.router, prefix="/api/v1/sms", tags=["sms"])
+app.include_router(receipts.router, prefix="/api/v1/receipts", tags=["receipts"])
+app.include_router(telegram.router, prefix="/api/v1/telegram", tags=["telegram"])
 
 @app.get("/")
 def root():
-    return {"message": "autoCRM API", "version": "1.0.0"}
+    return {"message": "autoCRM API", "version": "1.1.0"}
 
 @app.get("/health")
 def health():

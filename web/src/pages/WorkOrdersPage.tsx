@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Filter, Loader2, X, ChevronDown, ChevronUp, Clock, CheckCircle, AlertCircle, ClipboardList as ClipboardListIcon } from 'lucide-react'
+import { Plus, Search, Loader2, X, ChevronDown, ChevronUp, Clock, CheckCircle, AlertCircle, ClipboardList as ClipboardListIcon, MessageSquare, Printer, User } from 'lucide-react'
 import { workOrdersApi } from '../api/workOrders'
+import { staffApi } from '../api/staff'
+import { smsApi } from '../api/sms'
+import { receiptsApi } from '../api/receipts'
 import { useToastStore } from '../components/Toast'
 import CreateWorkOrderModal from '../components/CreateWorkOrderModal'
+import ReceiptModal from '../components/ReceiptModal'
 
 interface WorkOrder {
   id: string
   client: { name: string; phone: string }
   vehicle: { make: string; model: string; license_plate: string }
   service: { name: string }
+  staff_id?: string
   status: string
   total_cost: number
   scheduled_date: string
@@ -30,6 +35,7 @@ export default function WorkOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showCreate, setShowCreate] = useState(false)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [showReceipt, setShowReceipt] = useState<WorkOrder | null>(null)
   const { addToast } = useToastStore()
   const queryClient = useQueryClient()
 
@@ -41,14 +47,52 @@ export default function WorkOrdersPage() {
     },
   })
 
+  const { data: staff } = useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const res = await staffApi.getAll()
+      return res.data
+    },
+  })
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      // API call
-      return { id, status }
+      return workOrdersApi.updateStatus(id, status)
     },
     onSuccess: () => {
       addToast('Статус обновлён', 'success')
       queryClient.invalidateQueries({ queryKey: ['workOrders'] })
+    },
+  })
+
+  const assignStaffMutation = useMutation({
+    mutationFn: async ({ id, staff_id }: { id: string; staff_id: string }) => {
+      return workOrdersApi.update(id, { staff_id })
+    },
+    onSuccess: () => {
+      addToast('Механик назначен', 'success')
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] })
+    },
+  })
+
+  const sendSmsMutation = useMutation({
+    mutationFn: async ({ phone, message }: { phone: string; message: string }) => {
+      return smsApi.send({ phone, message })
+    },
+    onSuccess: () => {
+      addToast('SMS отправлено', 'success')
+    },
+    onError: () => {
+      addToast('Ошибка отправки SMS', 'error')
+    },
+  })
+
+  const createReceiptMutation = useMutation({
+    mutationFn: async (work_order_id: string) => {
+      return receiptsApi.create({ work_order_id })
+    },
+    onSuccess: () => {
+      addToast('Чек создан', 'success')
     },
   })
 
@@ -60,6 +104,12 @@ export default function WorkOrdersPage() {
     const matchesStatus = statusFilter === 'all' || o.status === statusFilter
     return matchesSearch && matchesStatus
   }) || []
+
+  const getStaffName = (staffId?: string) => {
+    if (!staffId) return 'Не назначен'
+    const s = staff?.find((m: any) => m.id === staffId)
+    return s?.name || 'Не назначен'
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -169,8 +219,8 @@ export default function WorkOrdersPage() {
             </button>
 
             {expandedOrder === order.id && (
-              <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3">
-                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+              <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500 dark:text-gray-400">Телефон:</span>
                     <span className="ml-2 text-gray-900 dark:text-gray-100">{order.client?.phone || '-'}</span>
@@ -182,11 +232,25 @@ export default function WorkOrdersPage() {
                     </span>
                   </div>
                   <div className="col-span-2">
+                    <span className="text-gray-500 dark:text-gray-400">Механик:</span>
+                    <select
+                      value={order.staff_id || ''}
+                      onChange={(e) => assignStaffMutation.mutate({ id: order.id, staff_id: e.target.value })}
+                      className="ml-2 px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-sm dark:text-gray-100"
+                    >
+                      <option value="">Не назначен</option>
+                      {staff?.filter((s: any) => s.role === 'mechanic').map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
                     <span className="text-gray-500 dark:text-gray-400">Описание:</span>
                     <span className="ml-2 text-gray-900 dark:text-gray-100">{order.description || '-'}</span>
                   </div>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex flex-wrap gap-2">
                   {order.status !== 'completed' && order.status !== 'cancelled' && (
                     <>
                       {order.status === 'pending' && (
@@ -213,6 +277,25 @@ export default function WorkOrdersPage() {
                       </button>
                     </>
                   )}
+                  <button
+                    onClick={() => sendSmsMutation.mutate({
+                      phone: order.client?.phone,
+                      message: `Здравствуйте, ${order.client?.name}! Ваш заказ на ${order.service?.name} ${order.status === 'completed' ? 'готов' : 'в работе'}. Сумма: ${order.total_cost?.toLocaleString()} ₽`
+                    })}
+                    className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs hover:bg-sky-700 flex items-center gap-1"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    SMS
+                  </button>
+                  {order.status === 'completed' && (
+                    <button
+                      onClick={() => setShowReceipt(order)}
+                      className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-xs hover:bg-gray-700 flex items-center gap-1"
+                    >
+                      <Printer className="w-3 h-3" />
+                      Чек
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -228,6 +311,7 @@ export default function WorkOrdersPage() {
       )}
 
       {showCreate && <CreateWorkOrderModal onClose={() => setShowCreate(false)} />}
+      {showReceipt && <ReceiptModal order={showReceipt} onClose={() => setShowReceipt(null)} />}
     </div>
   )
 }

@@ -11,6 +11,8 @@ import {
   Settings,
   LogOut,
   Wrench,
+  UserCheck,
+  Banknote,
 } from 'lucide-react'
 
 const menuItems = [
@@ -22,6 +24,8 @@ const menuItems = [
   { path: '/marketing', icon: Megaphone, label: 'Маркетинг' },
   { path: '/warehouse', icon: Package, label: 'Склад' },
   { path: '/analytics', icon: BarChart3, label: 'Аналитика' },
+  { path: '/staff', icon: UserCheck, label: 'Механики' },
+  { path: '/salary', icon: Banknote, label: 'Зарплаты' },
   { path: '/settings', icon: Settings, label: 'Настройки' },
 ]
 

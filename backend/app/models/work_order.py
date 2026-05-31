@@ -9,6 +9,7 @@ class WorkOrder(Base):
     client_id = Column(String(36), ForeignKey("clients.id"), nullable=False)
     vehicle_id = Column(String(36), ForeignKey("vehicles.id"), nullable=False)
     service_id = Column(String(36), ForeignKey("services.id"), nullable=False)
+    staff_id = Column(String(36), ForeignKey("staff.id"), nullable=True)
     status = Column(String(20), default="pending")
     total_cost = Column(Numeric(10, 2), default=0)
     description = Column(Text)

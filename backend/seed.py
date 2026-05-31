@@ -7,6 +7,7 @@ from app.models.service import Service
 from app.models.work_order import WorkOrder
 from app.models.transaction import Transaction
 from app.models.warehouse import Part
+from app.models.staff import Staff
 from app.core.security import get_password_hash
 from datetime import datetime, timedelta
 
@@ -28,6 +29,19 @@ def seed():
         is_admin=True,
     )
     db.add(admin)
+    
+    # Staff
+    staff_members = [
+        {"name": "Сергеев Иван Николаевич", "phone": "+7 (999) 111-22-33", "role": "mechanic", "commission_rate": 35.0},
+        {"name": "Кузнецов Алексей Петрович", "phone": "+7 (999) 222-33-44", "role": "mechanic", "commission_rate": 30.0},
+        {"name": "Волкова Елена Сергеевна", "phone": "+7 (999) 333-44-55", "role": "admin", "commission_rate": 0.0},
+    ]
+    staff_list = []
+    for s in staff_members:
+        staff = Staff(**s)
+        db.add(staff)
+        staff_list.append(staff)
+    db.flush()
     
     # Clients
     clients_data = [
@@ -75,10 +89,10 @@ def seed():
     
     # Work Orders
     orders_data = [
-        {"client_id": clients[0].id, "vehicle_id": vehicles[0].id, "service_id": services[0].id, "status": "completed", "total_cost": 8500, "description": "Плановое ТО", "scheduled_date": datetime.utcnow() - timedelta(days=2)},
-        {"client_id": clients[1].id, "vehicle_id": vehicles[1].id, "service_id": services[1].id, "status": "in_progress", "total_cost": 3500, "description": "Стук в передней подвеске", "scheduled_date": datetime.utcnow()},
-        {"client_id": clients[2].id, "vehicle_id": vehicles[2].id, "service_id": services[3].id, "status": "pending", "total_cost": 3200, "description": "Переобувка на лето", "scheduled_date": datetime.utcnow() + timedelta(days=1)},
-        {"client_id": clients[0].id, "vehicle_id": vehicles[0].id, "service_id": services[2].id, "status": "pending", "total_cost": 12000, "description": "Скрип при торможении", "scheduled_date": datetime.utcnow() + timedelta(days=2)},
+        {"client_id": clients[0].id, "vehicle_id": vehicles[0].id, "service_id": services[0].id, "staff_id": staff_list[0].id, "status": "completed", "total_cost": 8500, "description": "Плановое ТО", "scheduled_date": datetime.utcnow() - timedelta(days=2), "completed_date": datetime.utcnow() - timedelta(days=2)},
+        {"client_id": clients[1].id, "vehicle_id": vehicles[1].id, "service_id": services[1].id, "staff_id": staff_list[1].id, "status": "in_progress", "total_cost": 3500, "description": "Стук в передней подвеске", "scheduled_date": datetime.utcnow()},
+        {"client_id": clients[2].id, "vehicle_id": vehicles[2].id, "service_id": services[3].id, "staff_id": staff_list[0].id, "status": "pending", "total_cost": 3200, "description": "Переобувка на лето", "scheduled_date": datetime.utcnow() + timedelta(days=1)},
+        {"client_id": clients[0].id, "vehicle_id": vehicles[0].id, "service_id": services[2].id, "staff_id": staff_list[1].id, "status": "pending", "total_cost": 12000, "description": "Скрип при торможении", "scheduled_date": datetime.utcnow() + timedelta(days=2)},
     ]
     for o in orders_data:
         order = WorkOrder(**o)

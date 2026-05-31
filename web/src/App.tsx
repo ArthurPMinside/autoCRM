@@ -10,6 +10,8 @@ import FinancePage from './pages/FinancePage'
 import MarketingPage from './pages/MarketingPage'
 import WarehousePage from './pages/WarehousePage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import StaffPage from './pages/StaffPage'
+import SalaryPage from './pages/SalaryPage'
 import SettingsPage from './pages/SettingsPage'
 import ToastContainer from './components/Toast'
 import { useThemeStore } from './store/themeStore'
@@ -33,6 +35,8 @@ function App() {
           <Route path="marketing" element={<MarketingPage />} />
           <Route path="warehouse" element={<WarehousePage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="salary" element={<SalaryPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

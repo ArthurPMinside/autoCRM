@@ -1,12 +1,31 @@
 import { useState } from 'react'
-import { Save, Bell, Moon, Sun, Globe, Shield, User, Building2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Save, Bell, Moon, Sun, Shield, User, Building2, MessageSquare, Send } from 'lucide-react'
 import { useThemeStore } from '../store/themeStore'
 import { useToastStore } from '../components/Toast'
+import { smsApi } from '../api/sms'
+import { telegramApi } from '../api/telegram'
 
 export default function SettingsPage() {
   const { isDark, toggle } = useThemeStore()
   const { addToast } = useToastStore()
   const [activeSection, setActiveSection] = useState('profile')
+
+  const { data: smsStatus } = useQuery({
+    queryKey: ['smsStatus'],
+    queryFn: async () => {
+      const res = await smsApi.getStatus()
+      return res.data
+    },
+  })
+
+  const { data: telegramStatus } = useQuery({
+    queryKey: ['telegramStatus'],
+    queryFn: async () => {
+      const res = await telegramApi.getStatus()
+      return res.data
+    },
+  })
 
   const [profile, setProfile] = useState({
     firstName: 'Админ',
@@ -32,6 +51,17 @@ export default function SettingsPage() {
     telegramBot: true,
   })
 
+  const [smsSettings, setSmsSettings] = useState({
+    provider: 'mock',
+    apiKey: '',
+    enabled: true,
+  })
+
+  const [telegramSettings, setTelegramSettings] = useState({
+    token: '',
+    enabled: false,
+  })
+
   const handleSave = () => {
     addToast('Настройки сохранены', 'success')
   }
@@ -40,6 +70,7 @@ export default function SettingsPage() {
     { key: 'profile', label: 'Профиль', icon: User },
     { key: 'company', label: 'Компания', icon: Building2 },
     { key: 'notifications', label: 'Уведомления', icon: Bell },
+    { key: 'integrations', label: 'Интеграции', icon: Send },
     { key: 'security', label: 'Безопасность', icon: Shield },
   ]
 
@@ -75,7 +106,6 @@ export default function SettingsPage() {
               </button>
             ))}
 
-            {/* Theme toggle */}
             <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
@@ -108,38 +138,20 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Имя</label>
-                    <input
-                      value={profile.firstName}
-                      onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                    />
+                    <input value={profile.firstName} onChange={(e) => setProfile({ ...profile, firstName: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Фамилия</label>
-                    <input
-                      value={profile.lastName}
-                      onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                    />
+                    <input value={profile.lastName} onChange={(e) => setProfile({ ...profile, lastName: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                  />
+                  <input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Телефон</label>
-                  <input
-                    type="tel"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                  />
+                  <input type="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                 </div>
               </div>
             )}
@@ -149,55 +161,30 @@ export default function SettingsPage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Компания</h3>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Название</label>
-                  <input
-                    value={company.name}
-                    onChange={(e) => setCompany({ ...company, name: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                  />
+                  <input value={company.name} onChange={(e) => setCompany({ ...company, name: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Адрес</label>
-                  <input
-                    value={company.address}
-                    onChange={(e) => setCompany({ ...company, address: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                  />
+                  <input value={company.address} onChange={(e) => setCompany({ ...company, address: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Телефон</label>
-                    <input
-                      value={company.phone}
-                      onChange={(e) => setCompany({ ...company, phone: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                    />
+                    <input value={company.phone} onChange={(e) => setCompany({ ...company, phone: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={company.email}
-                      onChange={(e) => setCompany({ ...company, email: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                    />
+                    <input type="email" value={company.email} onChange={(e) => setCompany({ ...company, email: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Сайт</label>
-                    <input
-                      value={company.website}
-                      onChange={(e) => setCompany({ ...company, website: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                    />
+                    <input value={company.website} onChange={(e) => setCompany({ ...company, website: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Режим работы</label>
-                    <input
-                      value={company.workHours}
-                      onChange={(e) => setCompany({ ...company, workHours: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
-                    />
+                    <input value={company.workHours} onChange={(e) => setCompany({ ...company, workHours: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
                   </div>
                 </div>
               </div>
@@ -225,14 +212,82 @@ export default function SettingsPage() {
                           notifications[item.key as keyof typeof notifications] ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                       >
-                        <span
-                          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            notifications[item.key as keyof typeof notifications] ? 'translate-x-5' : 'translate-x-0'
-                          }`}
-                        />
+                        <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                          notifications[item.key as keyof typeof notifications] ? 'translate-x-5' : 'translate-x-0'
+                        }`} />
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'integrations' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Интеграции</h3>
+
+                {/* SMS */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-primary-500" />
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">SMS-уведомления</h4>
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+                      smsStatus?.mock_mode
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
+                    }`}>
+                      {smsStatus?.mock_mode ? 'Mock режим' : 'Активно'}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Провайдер</label>
+                    <select
+                      value={smsSettings.provider}
+                      onChange={(e) => setSmsSettings({ ...smsSettings, provider: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+                    >
+                      <option value="mock">Mock (тестовый)</option>
+                      <option value="smsru">SMS.ru</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API ключ</label>
+                    <input
+                      type="password"
+                      value={smsSettings.apiKey}
+                      onChange={(e) => setSmsSettings({ ...smsSettings, apiKey: e.target.value })}
+                      placeholder="Введите API ключ"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Telegram */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-5 h-5 text-sky-500" />
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Telegram-бот</h4>
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+                      telegramStatus?.enabled
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700'
+                    }`}>
+                      {telegramStatus?.enabled ? 'Активен' : 'Не настроен'}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bot Token</label>
+                    <input
+                      type="password"
+                      value={telegramSettings.token}
+                      onChange={(e) => setTelegramSettings({ ...telegramSettings, token: e.target.value })}
+                      placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Получите токен у @BotFather в Telegram
+                  </p>
                 </div>
               </div>
             )}
@@ -251,18 +306,6 @@ export default function SettingsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Подтвердите пароль</label>
                   <input type="password" placeholder="Повторите новый пароль" className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
-                </div>
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Двухфакторная аутентификация</h4>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">SMS-подтверждение</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Запрашивать код при входе</div>
-                    </div>
-                    <button className="relative w-11 h-6 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <span className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full" />
-                    </button>
-                  </div>
                 </div>
               </div>
             )}
