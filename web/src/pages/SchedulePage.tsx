@@ -103,12 +103,14 @@ export default function SchedulePage() {
   }
 
   // Group orders by day and compute their time ranges
+  // Filter out cancelled orders from schedule view
   const ordersByDay = useMemo(() => {
     const result: ScheduledOrder[][] = Array.from({ length: 7 }, () => [])
     if (!orders) return result
 
     for (const order of orders) {
       if (!order.scheduled_date) continue
+      if (order.status === 'cancelled') continue
       const orderDate = new Date(order.scheduled_date)
       const dayIndex = orderDate.getDay() === 0 ? 6 : orderDate.getDay() - 1
       const slotDate = addDays(weekStart, dayIndex)
@@ -205,6 +207,7 @@ export default function SchedulePage() {
           <div className="text-sm text-gray-500 dark:text-gray-400">
             {orders?.filter((o: any) => {
               if (!o.scheduled_date) return false
+              if (o.status === 'cancelled') return false
               const d = new Date(o.scheduled_date)
               return d >= weekStart && d < addDays(weekStart, 7)
             }).length || 0} записей на неделе
