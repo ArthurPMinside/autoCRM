@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, Clock, Loader2, User } from 'lucide-react'
 import { workOrdersApi } from '../api/workOrders'
 import { staffApi } from '../api/staff'
 import CreateWorkOrderModal from '../components/CreateWorkOrderModal'
 
-const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']
+const START_HOUR = 8
+const END_HOUR = 20
+const SLOT_MINUTES = 60
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
@@ -37,11 +39,43 @@ function formatWeekRange(weekStart: Date): string {
   return `${startStr} — ${endStr}`
 }
 
+function timeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+}
+
+interface ScheduledOrder {
+  id: string
+  client: any
+  vehicle: any
+  service: any
+  staff_id?: string
+  status: string
+  total_cost: number
+  startMinutes: number
+  endMinutes: number
+  durationHours: number
+}
+
 export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showCreate, setShowCreate] = useState(false)
 
   const weekStart = getWeekStart(currentDate)
+
+  const timeSlots = useMemo(() => {
+    const slots = []
+    for (let m = START_HOUR * 60; m < END_HOUR * 60; m += SLOT_MINUTES) {
+      slots.push(minutesToTime(m))
+    }
+    return slots
+  }, [])
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['workOrders'],
@@ -65,18 +99,44 @@ export default function SchedulePage() {
     return s?.name?.split(' ')[0] || null
   }
 
-  const getOrdersForSlot = (dayIndex: number, time: string): any[] => {
-    if (!orders) return []
-    const slotDate = addDays(weekStart, dayIndex)
-    const [slotHour] = time.split(':').map(Number)
+  // Group orders by day and compute their time ranges
+  const ordersByDay = useMemo(() => {
+    const result: ScheduledOrder[][] = Array.from({ length: 7 }, () => [])
+    if (!orders) return result
 
-    return orders.filter((o: any) => {
-      if (!o.scheduled_date) return false
-      const orderDate = new Date(o.scheduled_date)
-      if (!isSameDay(orderDate, slotDate)) return false
-      const orderHour = orderDate.getHours()
-      return orderHour === slotHour || (orderHour === slotHour - 1 && orderDate.getMinutes() >= 30)
-    })
+    for (const order of orders) {
+      if (!order.scheduled_date) continue
+      const orderDate = new Date(order.scheduled_date)
+      const dayIndex = orderDate.getDay() === 0 ? 6 : orderDate.getDay() - 1
+      const slotDate = addDays(weekStart, dayIndex)
+      if (!isSameDay(orderDate, slotDate)) continue
+
+      const startMinutes = orderDate.getHours() * 60 + orderDate.getMinutes()
+      const durationHours = order.service?.duration || 1
+      const endMinutes = startMinutes + durationHours * 60
+
+      result[dayIndex].push({
+        ...order,
+        startMinutes,
+        endMinutes,
+        durationHours,
+      })
+    }
+    return result
+  }, [orders, weekStart])
+
+  // Check if an order occupies a given time slot
+  const getOrdersForSlot = (dayIndex: number, slotTime: string): ScheduledOrder[] => {
+    const slotMinutes = timeToMinutes(slotTime)
+    return ordersByDay[dayIndex].filter((o) =>
+      o.startMinutes <= slotMinutes && slotMinutes < o.endMinutes
+    )
+  }
+
+  // Check if this is the FIRST slot for an order (to render it only once)
+  const isFirstSlotForOrder = (order: ScheduledOrder, slotTime: string): boolean => {
+    const slotMinutes = timeToMinutes(slotTime)
+    return order.startMinutes <= slotMinutes && slotMinutes < order.startMinutes + SLOT_MINUTES
   }
 
   const getStatusColor = (status: string) => {
@@ -155,7 +215,7 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      {/* Week Grid */}
+      {/* Week Grid — Desktop */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hidden md:block">
         {/* Day Headers */}
         <div className="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
@@ -186,40 +246,59 @@ export default function SchedulePage() {
         {/* Time Slots */}
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
           {timeSlots.map((time) => (
-            <div key={time} className="grid grid-cols-8 min-h-[80px]">
+            <div key={time} className="grid grid-cols-8" style={{ minHeight: '60px' }}>
+              {/* Time label */}
               <div className="p-2 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 flex items-start justify-center pt-3">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{time}</span>
               </div>
+
+              {/* Days */}
               {Array.from({ length: 7 }, (_, dayIndex) => {
                 const slotOrders = getOrdersForSlot(dayIndex, time)
+                // Only render orders that START in this slot
+                const startingOrders = slotOrders.filter((o) => isFirstSlotForOrder(o, time))
+                // Orders that continue from previous slots (render empty to reserve space)
+                const continuingOrders = slotOrders.filter((o) => !isFirstSlotForOrder(o, time))
+
                 return (
                   <div
                     key={dayIndex}
-                    className="p-1.5 border-r border-gray-200 dark:border-gray-700 last:border-r-0 min-h-[80px]"
+                    className="p-1 border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative"
+                    style={{ minHeight: '60px' }}
                   >
-                    {slotOrders.map((order: any) => (
+                    {startingOrders.map((order) => (
                       <div
                         key={order.id}
-                        className={`mb-1 p-2 rounded-lg border text-xs cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(order.status)}`}
+                        className={`rounded-lg border text-xs cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(order.status)}`}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          left: '4px',
+                          right: '4px',
+                          zIndex: 10,
+                          height: `${Math.min(order.durationHours, END_HOUR - Math.floor(order.startMinutes / 60)) * 60 - 8}px`,
+                        }}
                       >
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${getStatusDot(order.status)}`} />
-                          <span className="font-medium truncate">{order.client?.name?.split(' ')[0] || 'Клиент'}</span>
-                        </div>
-                        <div className="truncate text-[10px] opacity-80">
-                          {order.vehicle?.make} {order.vehicle?.model}
-                        </div>
-                        {getStaffName(order.staff_id) && (
-                          <div className="flex items-center gap-0.5 text-[9px] opacity-60 mt-0.5">
-                            <User className="w-2 h-2" />
-                            {getStaffName(order.staff_id)}
+                        <div className="p-2 h-full flex flex-col">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${getStatusDot(order.status)}`} />
+                            <span className="font-medium truncate">{order.client?.name?.split(' ')[0] || 'Клиент'}</span>
                           </div>
-                        )}
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[10px] font-medium">{order.total_cost?.toLocaleString()} ₽</span>
-                          <span className="text-[9px] px-1 py-0.5 rounded bg-white/50 dark:bg-black/20">
-                            {getStatusLabel(order.status)}
-                          </span>
+                          <div className="truncate text-[10px] opacity-80">
+                            {order.vehicle?.make} {order.vehicle?.model}
+                          </div>
+                          {getStaffName(order.staff_id) && (
+                            <div className="flex items-center gap-0.5 text-[9px] opacity-60 mt-0.5">
+                              <User className="w-2 h-2" />
+                              {getStaffName(order.staff_id)}
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between mt-auto">
+                            <span className="text-[10px] font-medium">{order.total_cost?.toLocaleString()} ₽</span>
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-white/50 dark:bg-black/20">
+                              {order.durationHours}ч
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -239,14 +318,15 @@ export default function SchedulePage() {
         {timeSlots.map((time) => {
           const dayIndex = currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1
           const slotOrders = getOrdersForSlot(dayIndex, time)
-          if (slotOrders.length === 0) return null
+          const startingOrders = slotOrders.filter((o) => isFirstSlotForOrder(o, time))
+          if (startingOrders.length === 0) return null
           return (
             <div key={time} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
                 <Clock className="w-4 h-4 text-gray-400" />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{time}</span>
               </div>
-              {slotOrders.map((order: any) => (
+              {startingOrders.map((order) => (
                 <div key={order.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                   <div className={`w-2 h-2 rounded-full ${getStatusDot(order.status)}`} />
                   <div className="flex-1 min-w-0">
@@ -260,11 +340,13 @@ export default function SchedulePage() {
                         {getStaffName(order.staff_id)}
                       </div>
                     )}
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {order.durationHours} ч • {order.total_cost?.toLocaleString()} ₽
+                    </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
                     {getStatusLabel(order.status)}
                   </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{order.total_cost?.toLocaleString()} ₽</span>
                 </div>
               ))}
             </div>
