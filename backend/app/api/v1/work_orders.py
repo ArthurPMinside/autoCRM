@@ -7,7 +7,7 @@ from app.models.vehicle import Vehicle
 from app.models.service import Service
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -60,8 +60,8 @@ def get_work_orders(db: Session = Depends(get_db)):
             status=order.status,
             total_cost=float(order.total_cost or 0),
             description=order.description,
-            scheduled_date=order.scheduled_date.isoformat() if order.scheduled_date else None,
-            created_at=order.created_at.isoformat(),
+            scheduled_date=order.scheduled_date.replace(tzinfo=timezone.utc).isoformat() if order.scheduled_date else None,
+            created_at=order.created_at.replace(tzinfo=timezone.utc).isoformat(),
         ))
     return result
 

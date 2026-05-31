@@ -61,12 +61,15 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
 
   useEffect(() => {
     if (order.scheduled_date) {
+      // Parse as UTC (server returns +00:00 or Z)
       const d = new Date(order.scheduled_date)
-      // Format for datetime-local input: YYYY-MM-DDTHH:mm
+      // Format for datetime-local input: YYYY-MM-DDTHH:mm (local time)
       const pad = (n: number) => n.toString().padStart(2, '0')
       setScheduledDate(
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
       )
+    } else {
+      setScheduledDate('')
     }
   }, [order])
 
