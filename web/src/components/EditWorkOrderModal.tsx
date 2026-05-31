@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, Loader2, MessageSquare, Printer, User } from 'lucide-react'
+import { X, Loader2, MessageSquare, User, Car, Wrench } from 'lucide-react'
 import { workOrdersApi } from '../api/workOrders'
 import { staffApi } from '../api/staff'
+import { servicesApi } from '../api/services'
+import { clientsApi } from '../api/clients'
+import { vehiclesApi } from '../api/vehicles'
 import { smsApi } from '../api/sms'
 import { useToastStore } from './Toast'
 
@@ -17,13 +20,41 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
 
   const [status, setStatus] = useState(order.status)
   const [staffId, setStaffId] = useState(order.staff_id || '')
+  const [serviceId, setServiceId] = useState(order.service?.id || '')
+  const [clientId, setClientId] = useState(order.client?.id || '')
+  const [vehicleId, setVehicleId] = useState(order.vehicle?.id || '')
   const [scheduledDate, setScheduledDate] = useState('')
   const [description, setDescription] = useState(order.description || '')
+  const [totalCost, setTotalCost] = useState(order.total_cost || 0)
 
   const { data: staff } = useQuery({
     queryKey: ['staff'],
     queryFn: async () => {
       const res = await staffApi.getAll()
+      return res.data
+    },
+  })
+
+  const { data: services } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const res = await servicesApi.getAll()
+      return res.data
+    },
+  })
+
+  const { data: clients } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const res = await clientsApi.getAll()
+      return res.data
+    },
+  })
+
+  const { data: vehicles } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: async () => {
+      const res = await vehiclesApi.getAll()
       return res.data
     },
   })
@@ -38,6 +69,16 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
       )
     }
   }, [order])
+
+  // Update total cost when service changes
+  useEffect(() => {
+    if (serviceId && services) {
+      const selectedService = services.find((s: any) => s.id === serviceId)
+      if (selectedService) {
+        setTotalCost(selectedService.price || 0)
+      }
+    }
+  }, [serviceId, services])
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => workOrdersApi.update(order.id, data),
@@ -61,7 +102,7 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
   const sendSmsMutation = useMutation({
     mutationFn: () => smsApi.send({
       phone: order.client?.phone,
-      message: `Здравствуйте, ${order.client?.name}! Ваш заказ на ${order.service?.name} — статус: ${getStatusLabel(status)}. Сумма: ${order.total_cost?.toLocaleString()} ₽`,
+      message: `Здравствуйте, ${order.client?.name}! Ваш заказ на ${order.service?.name} — статус: ${getStatusLabel(status)}. Сумма: ${totalCost.toLocaleString()} ₽`,
     }),
     onSuccess: () => addToast('SMS отправлено', 'success'),
     onError: () => addToast('Ошибка отправки SMS', 'error'),
@@ -69,6 +110,9 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
 
   const handleSave = () => {
     const data: any = {}
+    if (clientId && clientId !== order.client?.id) data.client_id = clientId
+    if (vehicleId && vehicleId !== order.vehicle?.id) data.vehicle_id = vehicleId
+    if (serviceId && serviceId !== order.service?.id) data.service_id = serviceId
     if (staffId !== (order.staff_id || '')) data.staff_id = staffId || null
     if (scheduledDate) {
       data.scheduled_date = new Date(scheduledDate).toISOString()
@@ -103,6 +147,13 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
     }
   }
 
+  // Filter vehicles by selected client
+  const filteredVehicles = vehicles?.filter((v: any) => v.client_id === clientId) || []
+
+  // Get current client and vehicle names for display
+  const selectedClient = clients?.find((c: any) => c.id === clientId)
+  const selectedVehicle = vehicles?.find((v: any) => v.id === vehicleId)
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-lg max-h-[85vh] overflow-auto">
@@ -112,30 +163,68 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Client info */}
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div className="font-medium text-gray-900 dark:text-gray-100">{order.client?.name}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{order.client?.phone}</div>
+          {/* Client */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <span className="flex items-center gap-1">
+                <User className="w-3.5 h-3.5" />
+                Клиент
+              </span>
+            </label>
+            <select
+              value={clientId}
+              onChange={(e) => {
+                setClientId(e.target.value)
+                setVehicleId('') // Reset vehicle when client changes
+              }}
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+            >
+              <option value="">Выберите клиента</option>
+              {clients?.map((c: any) => (
+                <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>
+              ))}
+            </select>
           </div>
 
           {/* Vehicle */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-gray-500 dark:text-gray-400">Авто:</span>
-              <span className="ml-2 text-gray-900 dark:text-gray-100">{order.vehicle?.make} {order.vehicle?.model}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 dark:text-gray-400">Номер:</span>
-              <span className="ml-2 text-gray-900 dark:text-gray-100">{order.vehicle?.license_plate}</span>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <span className="flex items-center gap-1">
+                <Car className="w-3.5 h-3.5" />
+                Автомобиль
+              </span>
+            </label>
+            <select
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              disabled={!clientId}
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100 disabled:opacity-50"
+            >
+              <option value="">Выберите автомобиль</option>
+              {filteredVehicles.map((v: any) => (
+                <option key={v.id} value={v.id}>{v.make} {v.model} — {v.license_plate}</option>
+              ))}
+            </select>
           </div>
 
           {/* Service */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Услуга</label>
-            <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100">
-              {order.service?.name} — {order.service?.price?.toLocaleString()} ₽
-            </div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <span className="flex items-center gap-1">
+                <Wrench className="w-3.5 h-3.5" />
+                Услуга
+              </span>
+            </label>
+            <select
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+            >
+              <option value="">Выберите услугу</option>
+              {services?.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name} — {s.price?.toLocaleString()} ₽ ({s.duration}ч)</option>
+              ))}
+            </select>
           </div>
 
           {/* Status */}
@@ -201,7 +290,7 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
           {/* Total */}
           <div className="flex items-center justify-between p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
             <span className="text-sm text-primary-700 dark:text-primary-300">Сумма:</span>
-            <span className="text-lg font-bold text-primary-800 dark:text-primary-200">{order.total_cost?.toLocaleString()} ₽</span>
+            <span className="text-lg font-bold text-primary-800 dark:text-primary-200">{totalCost.toLocaleString()} ₽</span>
           </div>
 
           {/* Actions */}

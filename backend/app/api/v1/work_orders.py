@@ -20,6 +20,9 @@ class WorkOrderCreate(BaseModel):
     status: Optional[str] = "pending"
 
 class WorkOrderUpdate(BaseModel):
+    client_id: Optional[str] = None
+    vehicle_id: Optional[str] = None
+    service_id: Optional[str] = None
     staff_id: Optional[str] = None
     description: Optional[str] = None
     scheduled_date: Optional[str] = None
@@ -114,6 +117,16 @@ def update_work_order(order_id: str, data: WorkOrderUpdate, db: Session = Depend
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
+    if data.client_id is not None:
+        order.client_id = data.client_id
+    if data.vehicle_id is not None:
+        order.vehicle_id = data.vehicle_id
+    if data.service_id is not None:
+        order.service_id = data.service_id
+        # Recalculate total cost when service changes
+        service = db.query(Service).filter(Service.id == data.service_id).first()
+        if service and service.price:
+            order.total_cost = float(service.price)
     if data.staff_id is not None:
         order.staff_id = data.staff_id
     if data.description is not None:
@@ -123,10 +136,13 @@ def update_work_order(order_id: str, data: WorkOrderUpdate, db: Session = Depend
         if order.status == "completed":
             order.completed_date = datetime.utcnow()
     if data.scheduled_date is not None:
-        try:
-            order.scheduled_date = datetime.fromisoformat(data.scheduled_date.replace('Z', '+00:00'))
-        except:
-            pass
+        if data.scheduled_date == "":
+            order.scheduled_date = None
+        else:
+            try:
+                order.scheduled_date = datetime.fromisoformat(data.scheduled_date.replace('Z', '+00:00'))
+            except:
+                pass
     
     db.commit()
     db.refresh(order)

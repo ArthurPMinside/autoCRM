@@ -29,6 +29,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
           <Route index element={<SchedulePage />} />
+          <Route path="schedule" element={<SchedulePage />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="workorders" element={<WorkOrdersPage />} />
