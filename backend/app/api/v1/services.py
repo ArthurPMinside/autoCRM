@@ -33,4 +33,49 @@ def create_service(data: ServiceCreate, db: Session = Depends(get_db)):
     db.add(service)
     db.commit()
     db.refresh(service)
-    return service
+    return ServiceResponse(
+        id=service.id,
+        name=service.name,
+        description=service.description,
+        price=float(service.price) if service.price else None,
+        duration=service.duration,
+    )
+
+@router.get("/{service_id}", response_model=ServiceResponse)
+def get_service(service_id: str, db: Session = Depends(get_db)):
+    service = db.query(Service).filter(Service.id == service_id).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    return ServiceResponse(
+        id=service.id,
+        name=service.name,
+        description=service.description,
+        price=float(service.price) if service.price else None,
+        duration=service.duration,
+    )
+
+@router.put("/{service_id}", response_model=ServiceResponse)
+def update_service(service_id: str, data: ServiceCreate, db: Session = Depends(get_db)):
+    service = db.query(Service).filter(Service.id == service_id).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    for key, value in data.dict().items():
+        setattr(service, key, value)
+    db.commit()
+    db.refresh(service)
+    return ServiceResponse(
+        id=service.id,
+        name=service.name,
+        description=service.description,
+        price=float(service.price) if service.price else None,
+        duration=service.duration,
+    )
+
+@router.delete("/{service_id}")
+def delete_service(service_id: str, db: Session = Depends(get_db)):
+    service = db.query(Service).filter(Service.id == service_id).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    db.delete(service)
+    db.commit()
+    return {"status": "ok"}
