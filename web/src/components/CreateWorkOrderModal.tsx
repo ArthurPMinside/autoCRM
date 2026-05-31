@@ -9,15 +9,16 @@ import { useToastStore } from './Toast'
 
 interface Props {
   onClose: () => void
+  initialDate?: string
 }
 
-export default function CreateWorkOrderModal({ onClose }: Props) {
+export default function CreateWorkOrderModal({ onClose, initialDate }: Props) {
   const [step, setStep] = useState(1)
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
   const [selectedService, setSelectedService] = useState<any>(null)
   const [description, setDescription] = useState('')
-  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledDate, setScheduledDate] = useState(initialDate || '')
   const [searchClient, setSearchClient] = useState('')
   const [showNewClient, setShowNewClient] = useState(false)
   const [newClient, setNewClient] = useState({ name: '', phone: '', email: '' })

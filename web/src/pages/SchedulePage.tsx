@@ -67,6 +67,7 @@ interface ScheduledOrder {
 export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showCreate, setShowCreate] = useState(false)
+  const [createInitialDate, setCreateInitialDate] = useState('')
   const [editingOrder, setEditingOrder] = useState<any>(null)
 
   const weekStart = getWeekStart(currentDate)
@@ -262,16 +263,29 @@ export default function SchedulePage() {
                 // Orders that continue from previous slots (render empty to reserve space)
                 const continuingOrders = slotOrders.filter((o) => !isFirstSlotForOrder(o, time))
 
+                const slotDate = addDays(weekStart, dayIndex)
+                const [slotHour] = time.split(':').map(Number)
+                const slotDateTime = new Date(slotDate)
+                slotDateTime.setHours(slotHour, 0, 0, 0)
+                const pad = (n: number) => n.toString().padStart(2, '0')
+                const initialDateStr = `${slotDateTime.getFullYear()}-${pad(slotDateTime.getMonth() + 1)}-${pad(slotDateTime.getDate())}T${pad(slotDateTime.getHours())}:00`
+
                 return (
                   <div
                     key={dayIndex}
-                    className="p-1 border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative"
+                    onClick={() => {
+                      if (slotOrders.length === 0) {
+                        setCreateInitialDate(initialDateStr)
+                        setShowCreate(true)
+                      }
+                    }}
+                    className={`p-1 border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative ${slotOrders.length === 0 ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : ''}`}
                     style={{ minHeight: '60px' }}
                   >
                     {startingOrders.map((order) => (
                       <div
                         key={order.id}
-                        onClick={() => setEditingOrder(order)}
+                        onClick={(e) => { e.stopPropagation(); setEditingOrder(order) }}
                         className={`rounded-lg border text-xs cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(order.status)}`}
                         style={{
                           position: 'absolute',
@@ -322,15 +336,34 @@ export default function SchedulePage() {
           const dayIndex = currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1
           const slotOrders = getOrdersForSlot(dayIndex, time)
           const startingOrders = slotOrders.filter((o) => isFirstSlotForOrder(o, time))
-          if (startingOrders.length === 0) return null
+          
+          const slotDate = addDays(weekStart, dayIndex)
+          const [slotHour] = time.split(':').map(Number)
+          const slotDateTime = new Date(slotDate)
+          slotDateTime.setHours(slotHour, 0, 0, 0)
+          const pad = (n: number) => n.toString().padStart(2, '0')
+          const initialDateStr = `${slotDateTime.getFullYear()}-${pad(slotDateTime.getMonth() + 1)}-${pad(slotDateTime.getDate())}T${pad(slotDateTime.getHours())}:00`
+          
           return (
-            <div key={time} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div 
+              key={time} 
+              onClick={() => {
+                if (startingOrders.length === 0) {
+                  setCreateInitialDate(initialDateStr)
+                  setShowCreate(true)
+                }
+              }}
+              className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden ${startingOrders.length === 0 ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : ''}`}
+            >
               <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
                 <Clock className="w-4 h-4 text-gray-400" />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{time}</span>
+                {startingOrders.length === 0 && (
+                  <span className="ml-auto text-xs text-gray-400">+ Добавить</span>
+                )}
               </div>
               {startingOrders.map((order) => (
-                <div key={order.id} onClick={() => setEditingOrder(order)} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <div key={order.id} onClick={(e) => { e.stopPropagation(); setEditingOrder(order) }} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <div className={`w-2 h-2 rounded-full ${getStatusDot(order.status)}`} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{order.client?.name || 'Клиент'}</div>
@@ -357,7 +390,7 @@ export default function SchedulePage() {
         })}
       </div>
 
-      {showCreate && <CreateWorkOrderModal onClose={() => setShowCreate(false)} />}
+      {showCreate && <CreateWorkOrderModal onClose={() => setShowCreate(false)} initialDate={createInitialDate} />}
       {editingOrder && <EditWorkOrderModal order={editingOrder} onClose={() => setEditingOrder(null)} />}
     </div>
   )
