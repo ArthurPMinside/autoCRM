@@ -13,6 +13,7 @@ import {
   Wrench,
   UserCheck,
   Banknote,
+  Briefcase,
 } from 'lucide-react'
 
 const menuItems = [
@@ -20,6 +21,7 @@ const menuItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Дашборд' },
   { path: '/clients', icon: Users, label: 'Клиенты' },
   { path: '/workorders', icon: ClipboardList, label: 'Заказы' },
+  { path: '/services', icon: Briefcase, label: 'Услуги' },
   { path: '/finance', icon: Wallet, label: 'Финансы' },
   { path: '/marketing', icon: Megaphone, label: 'Маркетинг' },
   { path: '/warehouse', icon: Package, label: 'Склад' },
