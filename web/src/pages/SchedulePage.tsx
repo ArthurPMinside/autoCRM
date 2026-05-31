@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Clock, Loader2, User } from 'lucide-re
 import { workOrdersApi } from '../api/workOrders'
 import { staffApi } from '../api/staff'
 import CreateWorkOrderModal from '../components/CreateWorkOrderModal'
+import EditWorkOrderModal from '../components/EditWorkOrderModal'
 
 const START_HOUR = 8
 const END_HOUR = 20
@@ -66,6 +67,7 @@ interface ScheduledOrder {
 export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showCreate, setShowCreate] = useState(false)
+  const [editingOrder, setEditingOrder] = useState<any>(null)
 
   const weekStart = getWeekStart(currentDate)
 
@@ -269,6 +271,7 @@ export default function SchedulePage() {
                     {startingOrders.map((order) => (
                       <div
                         key={order.id}
+                        onClick={() => setEditingOrder(order)}
                         className={`rounded-lg border text-xs cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(order.status)}`}
                         style={{
                           position: 'absolute',
@@ -327,7 +330,7 @@ export default function SchedulePage() {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{time}</span>
               </div>
               {startingOrders.map((order) => (
-                <div key={order.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                <div key={order.id} onClick={() => setEditingOrder(order)} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <div className={`w-2 h-2 rounded-full ${getStatusDot(order.status)}`} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{order.client?.name || 'Клиент'}</div>
@@ -355,6 +358,7 @@ export default function SchedulePage() {
       </div>
 
       {showCreate && <CreateWorkOrderModal onClose={() => setShowCreate(false)} />}
+      {editingOrder && <EditWorkOrderModal order={editingOrder} onClose={() => setEditingOrder(null)} />}
     </div>
   )
 }
