@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>autoCRM — Telegram Bot Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>body{font-family:'Inter',sans-serif;}</style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen">
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="text-center mb-12">
+            <h1 class="text-3xl font-bold mb-2">Telegram-бот для клиентов</h1>
+            <p class="text-slate-400">Сценарии диалога и flow</p>
+        </div>
+
+        <!-- Main Flow -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Phone Mockup -->
+            <div class="lg:col-span-1">
+                <div class="bg-slate-900 border-4 border-slate-800 rounded-[3rem] p-4 max-w-sm mx-auto">
+                    <div class="bg-slate-800 rounded-[2.5rem] overflow-hidden">
+                        <!-- Status Bar -->
+                        <div class="bg-slate-900 px-6 py-3 flex items-center justify-between">
+                            <span class="text-sm">9:41</span>
+                            <div class="flex gap-1">
+                                <div class="w-4 h-2.5 bg-white rounded-sm"></div>
+                                <div class="w-0.5 h-2.5 bg-white rounded-sm"></div>
+                            </div>
+                        </div>
+                        <!-- Chat Header -->
+                        <div class="bg-slate-800 px-4 py-3 flex items-center gap-3 border-b border-slate-700">
+                            <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-sm">autoCRM Bot</p>
+                                <p class="text-slate-400 text-xs">онлайн</p>
+                            </div>
+                        </div>
+                        <!-- Chat Messages -->
+                        <div class="bg-slate-900 p-4 space-y-3 h-96 overflow-y-auto">
+                            <div class="flex justify-center">
+                                <span class="text-xs text-slate-500">Сегодня</span>
+                            </div>
+                            <div class="bg-slate-800 rounded-2xl rounded-tl-sm p-3 max-w-[85%]">
+                                <p class="text-sm">👋 Здравствуйте! Добро пожаловать в автосервис "АвтоПрофи".</p>
+                                <p class="text-sm mt-2">Чем могу помочь?</p>
+                            </div>
+                            <div class="space-y-2">
+                                <button class="w-full text-left px-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm transition">📅 Записаться на сервис</button>
+                                <button class="w-full text-left px-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm transition">📋 Мои заказы</button>
+                                <button class="w-full text-left px-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm transition">🚗 Мои автомобили</button>
+                                <button class="w-full text-left px-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm transition">💬 Связаться с мастерской</button>
+                            </div>
+                        </div>
+                        <!-- Input -->
+                        <div class="bg-slate-800 px-4 py-3 flex items-center gap-2">
+                            <div class="flex-1 bg-slate-900 rounded-full px-4 py-2 text-sm text-slate-400">Сообщение...</div>
+                            <div class="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flow Diagram -->
+            <div class="lg:col-span-2 space-y-6">
+                <h2 class="text-xl font-semibold">Сценарии диалога</h2>
+                
+                <!-- Scenario 1 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-amber-400/10 rounded-xl flex items-center justify-center">
+                            <span class="text-amber-400 font-bold">1</span>
+                        </div>
+                        <h3 class="text-lg font-semibold">Запись на сервис</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                            <div class="bg-slate-800 rounded-xl rounded-tl-sm p-3 flex-1">
+                                <p class="text-sm">Выберите услугу:</p>
+                                <div class="mt-2 space-y-1">
+                                    <div class="px-3 py-1.5 bg-slate-700 rounded-lg text-sm">🔧 ТО и замена масла</div>
+                                    <div class="px-3 py-1.5 bg-slate-700 rounded-lg text-sm">🛠️ Диагностика</div>
+                                    <div class="px-3 py-1.5 bg-slate-700 rounded-lg text-sm">⚡ Ремонт</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 flex-row-reverse">
+                            <div class="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center text-xs flex-shrink-0 text-slate-900 font-bold">Я</div>
+                            <div class="bg-amber-400 rounded-xl rounded-tr-sm p-3 max-w-[70%]">
+                                <p class="text-sm text-slate-900">🔧 ТО и замена масла</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                            <div class="bg-slate-800 rounded-xl rounded-tl-sm p-3 flex-1">
+                                <p class="text-sm">Выберите автомобиль:</p>
+                                <div class="mt-2 space-y-1">
+                                    <div class="px-3 py-1.5 bg-slate-700 rounded-lg text-sm">🚗 Toyota Camry (А123БВ777)</div>
+                                    <div class="px-3 py-1.5 bg-slate-700 rounded-lg text-sm">➕ Добавить новый</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                            <div class="bg-slate-800 rounded-xl rounded-tl-sm p-3 flex-1">
+                                <p class="text-sm">Выберите дату:</p>
+                                <div class="mt-2 grid grid-cols-3 gap-2">
+                                    <div class="px-2 py-1.5 bg-slate-700 rounded-lg text-sm text-center">Пн<br><span class="text-xs">3 июн</span></div>
+                                    <div class="px-2 py-1.5 bg-slate-700 rounded-lg text-sm text-center">Вт<br><span class="text-xs">4 июн</span></div>
+                                    <div class="px-2 py-1.5 bg-slate-700 rounded-lg text-sm text-center">Ср<br><span class="text-xs">5 июн</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                            <div class="bg-slate-800 rounded-xl rounded-tl-sm p-3 flex-1">
+                                <p class="text-sm">✅ Запись подтверждена!</p>
+                                <p class="text-sm mt-1 text-slate-400">📅 4 июня, 10:00</p>
+                                <p class="text-sm text-slate-400">🚗 Toyota Camry</p>
+                                <p class="text-sm text-slate-400">🔧 ТО и замена масла</p>
+                                <p class="text-sm mt-2 text-emerald-400">💰 Предварительная стоимость: ₽5,500</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 2 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-blue-400/10 rounded-xl flex items-center justify-center">
+                            <span class="text-blue-400 font-bold">2</span>
+                        </div>
+                        <h3 class="text-lg font-semibold">Уведомления клиенту</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-800 rounded-xl p-4">
+                            <p class="text-sm font-medium mb-2">🔔 Статус изменён</p>
+                            <p class="text-sm text-slate-400">Ваш заказ ЗН-2024-0542 переведён в статус "В работе".</p>
+                            <p class="text-sm text-slate-400 mt-1">Мастер: Смирнов Д.А.</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-4">
+                            <p class="text-sm font-medium mb-2">✅ Авто готово!</p>
+                            <p class="text-sm text-slate-400">Ваш Toyota Camry готов к выдаче.</p>
+                            <p class="text-sm text-slate-400 mt-1">Итого: ₽12,500</p>
+                            <button class="mt-2 px-3 py-1.5 bg-amber-400 text-slate-900 rounded-lg text-sm font-medium">Оплатить онлайн</button>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-4">
+                            <p class="text-sm font-medium mb-2">📅 Напоминание</p>
+                            <p class="text-sm text-slate-400">Завтра в 10:00 запись на ТО.</p>
+                            <p class="text-sm text-slate-400 mt-1">🚗 Toyota Camry (А123БВ777)</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-4">
+                            <p class="text-sm font-medium mb-2">🎁 Акция</p>
+                            <p class="text-sm text-slate-400">Скидка 15% на диагностику ходовой до конца месяца!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 3 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-purple-400/10 rounded-xl flex items-center justify-center">
+                            <span class="text-purple-400 font-bold">3</span>
+                        </div>
+                        <h3 class="text-lg font-semibold">Для сотрудников</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                            <div class="bg-slate-800 rounded-xl rounded-tl-sm p-3 flex-1">
+                                <p class="text-sm font-medium">🔔 Новая запись!</p>
+                                <p class="text-sm text-slate-400 mt-1">Клиент: Иванов Сергей</p>
+                                <p class="text-sm text-slate-400">🚗 Toyota Camry</p>
+                                <p class="text-sm text-slate-400">📅 4 июня, 10:00</p>
+                                <p class="text-sm text-slate-400">🔧 ТО и замена масла</p>
+                                <div class="mt-2 flex gap-2">
+                                    <button class="px-3 py-1.5 bg-emerald-400/10 text-emerald-400 rounded-lg text-sm">Принять</button>
+                                    <button class="px-3 py-1.5 bg-red-400/10 text-red-400 rounded-lg text-sm">Отменить</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

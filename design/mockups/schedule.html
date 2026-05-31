@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>autoCRM — Расписание</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .time-slot { min-height: 60px; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
+    <!-- Sidebar -->
+        <!-- Sidebar -->
+    <div class="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transition-colors duration-300">
+        <div class="p-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-slate-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold">autoCRM</span>
+            </div>
+        </div>
+        
+        <nav class="px-4 space-y-1">
+            <a href="schedule.html" class="flex items-center gap-3 px-4 py-3 bg-amber-400/10 text-amber-400 rounded-xl">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Расписание
+            </a>
+            <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Дашборд
+            </a>
+            <a href="clients.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Клиенты
+            </a>
+            <a href="workorders.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                Заказ-наряды
+            </a>
+            <a href="finance.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Финансы
+            </a>
+            <a href="marketing.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                Маркетинг
+            </a>
+            <a href="#" onclick="alert('В разработке')" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+                Склад
+            </a>
+            <a href="#" onclick="alert('В разработке')" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Аналитика
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
+            <div class="flex items-center gap-3 px-4 py-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">АП</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">Артур Петрук</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-500">Администратор</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Content -->
+    <div class="ml-64 h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-bold">Расписание</h1>
+                
+                <!-- Week Navigation -->
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                    <button class="p-1.5 hover:bg-slate-200 dark:bg-slate-700 rounded-md transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <span class="px-3 py-1 text-sm font-medium">2 июн. — 8 июн.</span>
+                    <button class="p-1.5 hover:bg-slate-200 dark:bg-slate-700 rounded-md transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+                <button class="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:bg-slate-700 rounded-lg transition">Сегодня</button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- View Toggle -->
+                <div class="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                    <button class="px-3 py-1.5 text-sm bg-amber-400 text-slate-900 rounded-md font-medium">Неделя</button>
+                    <button class="px-3 py-1.5 text-sm text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">День</button>
+                </div>
+
+                <!-- Filters -->
+                <select class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-400">
+                    <option>Все посты</option>
+                    <option>Пост 1</option>
+                    <option>Пост 2</option>
+                    <option>Пост 3</option>
+                </select>
+                <select class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-400">
+                    <option>Все мастера</option>
+                    <option>Смирнов Д.А.</option>
+                    <option>Кузнецов И.П.</option>
+                    <option>Волков А.С.</option>
+                </select>
+
+                <button class="px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-semibold rounded-lg hover:from-amber-300 hover:to-orange-400 transition shadow-lg shadow-amber-500/20 flex items-center gap-2 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Запись
+                </button>
+            </div>
+        </header>
+
+        <!-- Calendar Grid -->
+        <div class="flex-1 overflow-auto">
+            <div class="min-w-[900px]">
+                <!-- Days Header -->
+                <div class="grid grid-cols-8 border-b border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-950 z-10">
+                    <div class="p-3 border-r border-slate-800"></div>
+                    <div class="p-3 text-center border-r border-slate-800">
+                        <p class="text-xs text-slate-500 dark:text-slate-500">Пн</p>
+                        <p class="text-lg font-semibold">2</p>
+                    </div>
+                    <div class="p-3 text-center border-r border-slate-800 bg-amber-400/5">
+                        <p class="text-xs text-amber-400">Вт</p>
+                        <p class="text-lg font-semibold text-amber-400">3</p>
+                    </div>
+                    <div class="p-3 text-center border-r border-slate-800">
+                        <p class="text-xs text-slate-500 dark:text-slate-500">Ср</p>
+                        <p class="text-lg font-semibold">4</p>
+                    </div>
+                    <div class="p-3 text-center border-r border-slate-800">
+                        <p class="text-xs text-slate-500 dark:text-slate-500">Чт</p>
+                        <p class="text-lg font-semibold">5</p>
+                    </div>
+                    <div class="p-3 text-center border-r border-slate-800">
+                        <p class="text-xs text-slate-500 dark:text-slate-500">Пт</p>
+                        <p class="text-lg font-semibold">6</p>
+                    </div>
+                    <div class="p-3 text-center border-r border-slate-800">
+                        <p class="text-xs text-slate-500 dark:text-slate-500">Сб</p>
+                        <p class="text-lg font-semibold">7</p>
+                    </div>
+                    <div class="p-3 text-center">
+                        <p class="text-xs text-slate-500 dark:text-slate-500">Вс</p>
+                        <p class="text-lg font-semibold">8</p>
+                    </div>
+                </div>
+
+                <!-- Time Slots -->
+                <div class="grid grid-cols-8">
+                    <!-- Time Column -->
+                    <div class="border-r border-slate-800">
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">08:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">09:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">10:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">11:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">12:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">13:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">14:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">15:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">16:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">17:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">18:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500 border-b border-slate-800/50">19:00</div>
+                        <div class="time-slot px-3 py-2 text-xs text-slate-500 dark:text-slate-500">20:00</div>
+                    </div>
+
+                    <!-- Monday -->
+                    <div class="border-r border-slate-800 relative">
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-blue-400/10 border border-blue-400/20 rounded-lg p-2 cursor-pointer hover:bg-blue-400/20 transition h-full">
+                                <p class="text-xs font-medium text-blue-300">ТО и замена масла</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Иванов С.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">08:00 — 09:30</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                    <span class="text-xs text-emerald-400">Подтверждено</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-purple-400/10 border border-purple-400/20 rounded-lg p-2 cursor-pointer hover:bg-purple-400/20 transition h-full">
+                                <p class="text-xs font-medium text-purple-300">Диагностика ходовой</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Петров А.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">10:00 — 11:00</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
+                                    <span class="text-xs text-amber-400">В работе</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-emerald-400/10 border border-emerald-400/20 rounded-lg p-2 cursor-pointer hover:bg-emerald-400/20 transition h-full">
+                                <p class="text-xs font-medium text-emerald-300">Ремонт тормозов</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Сидоров М.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">14:00 — 16:00</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                    <span class="text-xs text-emerald-400">Готов</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+
+                    <!-- Tuesday (Today) -->
+                    <div class="border-r border-slate-800 relative bg-amber-400/5">
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-orange-400/10 border border-orange-400/20 rounded-lg p-2 cursor-pointer hover:bg-orange-400/20 transition h-full">
+                                <p class="text-xs font-medium text-orange-300">Замена свечей</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Козлова Е.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">09:00 — 10:00</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                    <span class="text-xs text-emerald-400">Подтверждено</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-pink-400/10 border border-pink-400/20 rounded-lg p-2 cursor-pointer hover:bg-pink-400/20 transition h-full">
+                                <p class="text-xs font-medium text-pink-300">Кузовной ремонт</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Новиков Д.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">11:00 — 14:00</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
+                                    <span class="text-xs text-amber-400">В работе</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-blue-400/10 border border-blue-400/20 rounded-lg p-2 cursor-pointer hover:bg-blue-400/20 transition h-full">
+                                <p class="text-xs font-medium text-blue-300">ТО и замена масла</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Морозов А.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">16:00 — 17:30</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-slate-400 rounded-full"></span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400">Создано</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+
+                    <!-- Wednesday -->
+                    <div class="border-r border-slate-800 relative">
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-cyan-400/10 border border-cyan-400/20 rounded-lg p-2 cursor-pointer hover:bg-cyan-400/20 transition h-full">
+                                <p class="text-xs font-medium text-cyan-300">Диагностика ДВС</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Волков К.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">08:00 — 09:30</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                    <span class="text-xs text-emerald-400">Подтверждено</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-red-400/10 border border-red-400/20 rounded-lg p-2 cursor-pointer hover:bg-red-400/20 transition h-full">
+                                <p class="text-xs font-medium text-red-300">Ремонт подвески</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Лебедев С.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">12:00 — 15:00</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                                    <span class="text-xs text-red-400">Ожидает запчастей</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+
+                    <!-- Thursday -->
+                    <div class="border-r border-slate-800 relative">
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-blue-400/10 border border-blue-400/20 rounded-lg p-2 cursor-pointer hover:bg-blue-400/20 transition h-full">
+                                <p class="text-xs font-medium text-blue-300">ТО и замена масла</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Иванов С.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">10:00 — 11:30</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                    <span class="text-xs text-emerald-400">Подтверждено</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+
+                    <!-- Friday -->
+                    <div class="border-r border-slate-800 relative">
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+
+                    <!-- Saturday -->
+                    <div class="border-r border-slate-800 relative">
+                        <div class="time-slot border-b border-slate-800/50 p-1">
+                            <div class="bg-amber-400/10 border border-amber-400/20 rounded-lg p-2 cursor-pointer hover:bg-amber-400/20 transition h-full">
+                                <p class="text-xs font-medium text-amber-300">Комплексное ТО</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500 dark:text-slate-400 mt-0.5">Федоров П.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-500">08:00 — 12:00</p>
+                                <div class="flex items-center gap-1 mt-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                    <span class="text-xs text-emerald-400">Подтверждено</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+
+                    <!-- Sunday -->
+                    <div class="relative">
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot border-b border-slate-800/50 p-1"></div>
+                        <div class="time-slot p-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="fixed bottom-6 right-6 w-12 h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition z-50" title="Переключить тему">
+        <svg id="sun-icon" class="w-6 h-6 text-amber-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <svg id="moon-icon" class="w-6 h-6 text-slate-600 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
+
+    <script>
+        // Theme toggle logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        
+        // Check saved theme or system preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        });
+    </script>
+</body>
+</html>

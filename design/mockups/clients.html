@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>autoCRM — Клиенты</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>body{font-family:'Inter',sans-serif;}</style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
+    <!-- Sidebar (simplified) -->
+        <!-- Sidebar -->
+    <div class="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transition-colors duration-300">
+        <div class="p-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-slate-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold">autoCRM</span>
+            </div>
+        </div>
+        
+        <nav class="px-4 space-y-1">
+            <a href="schedule.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Расписание
+            </a>
+            <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Дашборд
+            </a>
+            <a href="clients.html" class="flex items-center gap-3 px-4 py-3 bg-amber-400/10 text-amber-400 rounded-xl">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Клиенты
+            </a>
+            <a href="workorders.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                Заказ-наряды
+            </a>
+            <a href="finance.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Финансы
+            </a>
+            <a href="marketing.html" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                Маркетинг
+            </a>
+            <a href="#" onclick="alert('В разработке')" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+                Склад
+            </a>
+            <a href="#" onclick="alert('В разработке')" class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:bg-slate-800 rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Аналитика
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
+            <div class="flex items-center gap-3 px-4 py-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">АП</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">Артур Петрук</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-500">Администратор</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Content -->
+    <div class="ml-64">
+        <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-8 py-4 flex items-center justify-between sticky top-0 z-40">
+            <div>
+                <h1 class="text-2xl font-bold">Клиенты</h1>
+                <p class="text-slate-500 dark:text-slate-500 dark:text-slate-400 text-sm">База клиентов автомастерской</p>
+            </div>
+            <button class="px-4 py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-semibold rounded-xl hover:from-amber-300 hover:to-orange-400 transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Добавить клиента
+            </button>
+        </header>
+
+        <div class="p-8">
+            <!-- Stats Bar -->
+            <div class="flex gap-4 mb-6">
+                <div class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <span class="text-slate-500 dark:text-slate-500 dark:text-slate-400 text-sm">Всего клиентов:</span>
+                    <span class="font-semibold ml-2">1,247</span>
+                </div>
+                <div class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <span class="text-slate-500 dark:text-slate-500 dark:text-slate-400 text-sm">Новых в этом месяце:</span>
+                    <span class="font-semibold text-emerald-400 ml-2">+42</span>
+                </div>
+                <div class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <span class="text-slate-500 dark:text-slate-500 dark:text-slate-400 text-sm">VIP:</span>
+                    <span class="font-semibold text-amber-400 ml-2">18</span>
+                </div>
+            </div>
+
+            <!-- Search & Filter -->
+            <div class="flex gap-4 mb-6">
+                <div class="flex-1 relative">
+                    <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" placeholder="Поиск по имени, телефону или номеру авто..." class="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-amber-400">
+                </div>
+                <select class="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-amber-400">
+                    <option>Все сегменты</option>
+                    <option>VIP</option>
+                    <option>Регулярные</option>
+                    <option>Разовые</option>
+                </select>
+                <button class="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                </button>
+            </div>
+
+            <!-- Clients Table -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-left text-slate-500 dark:text-slate-500 dark:text-slate-400 text-sm">
+                            <th class="px-6 py-4 font-medium">Клиент</th>
+                            <th class="px-6 py-4 font-medium">Телефон</th>
+                            <th class="px-6 py-4 font-medium">Авто</th>
+                            <th class="px-6 py-4 font-medium">Визиты</th>
+                            <th class="px-6 py-4 font-medium">Последний визит</th>
+                            <th class="px-6 py-4 font-medium">Средний чек</th>
+                            <th class="px-6 py-4 font-medium">Сегмент</th>
+                            <th class="px-6 py-4 font-medium"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        <tr class="hover:bg-slate-100/50 dark:bg-slate-100 dark:bg-slate-800/50 transition cursor-pointer">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-sm font-bold">ИС</div>
+                                    <div>
+                                        <p class="font-medium">Иванов Сергей Петрович</p>
+                                        <p class="text-slate-500 dark:text-slate-500 text-sm">@sergey_ivanov</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">+7 (916) 123-45-67</td>
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p class="text-slate-900 dark:text-white">Toyota Camry</p>
+                                    <p class="text-slate-500 dark:text-slate-500 text-sm">А123БВ777</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">12</td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">15 мая 2024</td>
+                            <td class="px-6 py-4 font-semibold text-emerald-400">₽6,540</td>
+                            <td class="px-6 py-4"><span class="px-2 py-1 bg-amber-400/10 text-amber-400 text-xs rounded-lg">VIP</span></td>
+                            <td class="px-6 py-4">
+                                <button class="text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-100/50 dark:bg-slate-100 dark:bg-slate-800/50 transition cursor-pointer">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold">ПА</div>
+                                    <div>
+                                        <p class="font-medium">Петров Алексей Владимирович</p>
+                                        <p class="text-slate-500 dark:text-slate-500 text-sm">—</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">+7 (925) 987-65-43</td>
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p class="text-slate-900 dark:text-white">BMW X5</p>
+                                    <p class="text-slate-500 dark:text-slate-500 text-sm">М456НО199</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">5</td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">28 мая 2024</td>
+                            <td class="px-6 py-4 font-semibold text-emerald-400">₽10,460</td>
+                            <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-400/10 text-blue-400 text-xs rounded-lg">Регулярный</span></td>
+                            <td class="px-6 py-4">
+                                <button class="text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-100/50 dark:bg-slate-100 dark:bg-slate-800/50 transition cursor-pointer">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">СМ</div>
+                                    <div>
+                                        <p class="font-medium">Сидоров Михаил Андреевич</p>
+                                        <p class="text-slate-500 dark:text-slate-500 text-sm">@mikhail_s</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">+7 (903) 555-44-33</td>
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p class="text-slate-900 dark:text-white">Hyundai Solaris</p>
+                                    <p class="text-slate-500 dark:text-slate-500 text-sm">К789РС777</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">8</td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">20 мая 2024</td>
+                            <td class="px-6 py-4 font-semibold text-emerald-400">₽5,725</td>
+                            <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-lg">Разовый</span></td>
+                            <td class="px-6 py-4">
+                                <button class="text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-100/50 dark:bg-slate-100 dark:bg-slate-800/50 transition cursor-pointer">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full flex items-center justify-center text-sm font-bold">КЕ</div>
+                                    <div>
+                                        <p class="font-medium">Козлова Елена Дмитриевна</p>
+                                        <p class="text-slate-500 dark:text-slate-500 text-sm">—</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">+7 (916) 777-88-99</td>
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p class="text-slate-900 dark:text-white">Kia Rio</p>
+                                    <p class="text-slate-500 dark:text-slate-500 text-sm">Н012ТУ777</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">3</td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">5 мая 2024</td>
+                            <td class="px-6 py-4 font-semibold text-emerald-400">₽4,200</td>
+                            <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-lg">Разовый</span></td>
+                            <td class="px-6 py-4">
+                                <button class="text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-between mt-6">
+                <p class="text-slate-500 dark:text-slate-500 dark:text-slate-400 text-sm">Показано 4 из 1,247 клиентов</p>
+                <div class="flex gap-2">
+                    <button class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">←</button>
+                    <button class="px-3 py-2 bg-amber-400 text-slate-900 rounded-lg font-medium">1</button>
+                    <button class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">2</button>
+                    <button class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">3</button>
+                    <span class="px-3 py-2 text-slate-500 dark:text-slate-500">...</span>
+                    <button class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">312</button>
+                    <button class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 dark:text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="fixed bottom-6 right-6 w-12 h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition z-50" title="Переключить тему">
+        <svg id="sun-icon" class="w-6 h-6 text-amber-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <svg id="moon-icon" class="w-6 h-6 text-slate-600 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
+
+    <script>
+        // Theme toggle logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        
+        // Check saved theme or system preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        });
+    </script>
+</body>
+</html>
