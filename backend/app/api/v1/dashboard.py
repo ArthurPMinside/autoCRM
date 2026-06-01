@@ -120,4 +120,4 @@ def get_activity(db: Session = Depends(get_db)):
             "created_at": o.created_at.isoformat() if o.created_at else None,
         })
     
-    return result
+    return {"items": result}

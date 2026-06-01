@@ -1,36 +1,35 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { TrendingUp, Users, Repeat, AlertTriangle, Loader2, BarChart3 } from 'lucide-react'
+import { TrendingUp, Users, Repeat, AlertTriangle, Loader2, BarChart3, ArrowUpDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
 import { clientsApi } from '../api/clients'
 import { workOrdersApi } from '../api/workOrders'
+import { analyticsApi } from '../api/analytics'
+import DateRangePicker from '../components/DateRangePicker'
 
-const rfmData = [
-  { segment: 'Чемпионы', count: 12, color: '#10b981', desc: 'Частые, новые, высокий чек' },
-  { segment: 'Лояльные', count: 18, color: '#3b82f6', desc: 'Регулярные клиенты' },
-  { segment: 'Потенциал', count: 15, color: '#8b5cf6', desc: 'Новые с высоким чеком' },
-  { segment: 'В зоне риска', count: 8, color: '#f59e0b', desc: 'Не были давно' },
-  { segment: 'Потерянные', count: 5, color: '#ef4444', desc: 'Давно не посещали' },
-]
 
-const retentionData = [
-  { month: 'Янв', new: 12, returned: 8, churned: 3 },
-  { month: 'Фев', new: 15, returned: 10, churned: 4 },
-  { month: 'Мар', new: 18, returned: 14, churned: 5 },
-  { month: 'Апр', new: 14, returned: 16, churned: 3 },
-  { month: 'Май', new: 20, returned: 18, churned: 4 },
-]
 
-const revenueByService = [
-  { name: 'ТО', value: 35 },
-  { name: 'Диагностика', value: 15 },
-  { name: 'Ремонт', value: 30 },
-  { name: 'Кузов', value: 12 },
-  { name: 'Шиномонтаж', value: 8 },
-]
+function getDefaultDates() {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - 30)
+  const fmt = (d: Date) => d.toISOString().split('T')[0]
+  return { start: fmt(start), end: fmt(end) }
+}
+
+type SortBy = 'revenue' | 'orders' | 'clients' | 'source'
+type SortOrder = 'asc' | 'desc'
 
 export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<'rfm' | 'retention' | 'revenue'>('rfm')
+  const [activeTab, setActiveTab] = useState<'rfm' | 'retention' | 'revenue' | 'sources'>('sources')
+  const defaultDates = getDefaultDates()
+  const [startDate, setStartDate] = useState(defaultDates.start)
+  const [endDate, setEndDate] = useState(defaultDates.end)
+  const [sortBy, setSortBy] = useState<SortBy>('revenue')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+
+  const dateParams = { start_date: startDate, end_date: endDate }
+  const sourceParams = { ...dateParams, sort_by: sortBy, sort_order: sortOrder }
 
   const { data: clients, isLoading: clientsLoading } = useQuery({
     queryKey: ['clients'],
@@ -48,7 +47,60 @@ export default function AnalyticsPage() {
     },
   })
 
-  const isLoading = clientsLoading || ordersLoading
+  const { data: sourcesData, isLoading: sourcesLoading } = useQuery({
+    queryKey: ['analyticsSources', sourceParams],
+    queryFn: async () => {
+      const res = await analyticsApi.getSources(sourceParams)
+      return res.data
+    },
+  })
+
+  const { data: rfmData, isLoading: rfmLoading } = useQuery({
+    queryKey: ['analyticsRfm', dateParams],
+    queryFn: async () => {
+      const res = await analyticsApi.getRfm(dateParams)
+      return res.data
+    },
+  })
+
+  const { data: retentionData, isLoading: retentionLoading } = useQuery({
+    queryKey: ['analyticsRetention'],
+    queryFn: async () => {
+      const res = await analyticsApi.getRetention()
+      return res.data
+    },
+  })
+
+  const { data: revenueData, isLoading: revenueLoading } = useQuery({
+    queryKey: ['analyticsRevenue', dateParams],
+    queryFn: async () => {
+      const res = await analyticsApi.getRevenue(dateParams)
+      return res.data
+    },
+  })
+
+  const rfmSegments = [
+    { key: 'champions', label: 'Чемпионы', color: '#10b981', desc: 'Частые, новые, высокий чек' },
+    { key: 'loyal', label: 'Лояльные', color: '#3b82f6', desc: 'Регулярные клиенты' },
+    { key: 'potential', label: 'Потенциал', color: '#8b5cf6', desc: 'Новые с высоким чеком' },
+    { key: 'new', label: 'Новые', color: '#06b6d4', desc: 'Недавно пришли' },
+    { key: 'at_risk', label: 'В зоне риска', color: '#f59e0b', desc: 'Не были давно' },
+    { key: 'lost', label: 'Потерянные', color: '#ef4444', desc: 'Давно не посещали' },
+  ]
+
+  const rfmChartData = rfmSegments.map(s => ({
+    segment: s.label,
+    count: rfmData?.[s.key] || 0,
+    color: s.color,
+    desc: s.desc,
+  }))
+
+  const cohorts = retentionData?.cohorts || []
+
+  const revenueItems = revenueData?.items || []
+  const revenueTotal = revenueData?.total_revenue || 0
+
+  const isLoading = clientsLoading || ordersLoading || sourcesLoading || rfmLoading || retentionLoading || revenueLoading
 
   if (isLoading) {
     return (
@@ -61,10 +113,39 @@ export default function AnalyticsPage() {
   const avgVisits = clients ? (clients.reduce((sum: number, c: any) => sum + c.total_visits, 0) / clients.length).toFixed(1) : '0'
   const avgRevenue = clients ? (clients.reduce((sum: number, c: any) => sum + c.total_revenue, 0) / clients.length).toFixed(0) : '0'
 
+  const sources = sourcesData?.items || []
+  const totalRevenue = sourcesData?.total_revenue || 0
+  const totalOrders = sourcesData?.total_orders || 0
+  const totalClients = sourcesData?.total_clients || 0
+
+  const toggleSort = (field: SortBy) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')
+    } else {
+      setSortBy(field)
+      setSortOrder('desc')
+    }
+  }
+
+  const SortHeader = ({ field, children }: { field: SortBy; children: React.ReactNode }) => (
+    <button
+      onClick={() => toggleSort(field)}
+      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+    >
+      {children}
+      <ArrowUpDown className="w-3 h-3" />
+    </button>
+  )
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Аналитика</h2>
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+        />
       </div>
 
       {/* KPI Cards */}
@@ -102,6 +183,7 @@ export default function AnalyticsPage() {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
         {[
+          { key: 'sources', label: 'Источники', icon: BarChart3 },
           { key: 'rfm', label: 'RFM-сегменты', icon: Users },
           { key: 'retention', label: 'Удержание', icon: Repeat },
           { key: 'revenue', label: 'Выручка', icon: BarChart3 },
@@ -121,6 +203,104 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
+      {/* Sources Tab */}
+      {activeTab === 'sources' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Всего выручки</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalRevenue.toLocaleString()} ₽</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Всего заказов</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalOrders}</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Уникальных клиентов</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalClients}</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Источники клиентов</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-700/50">
+                    <th className="text-left px-5 py-3">
+                      <SortHeader field="source">Источник</SortHeader>
+                    </th>
+                    <th className="text-right px-5 py-3">
+                      <SortHeader field="orders">Заказы</SortHeader>
+                    </th>
+                    <th className="text-right px-5 py-3">
+                      <SortHeader field="clients">Клиенты</SortHeader>
+                    </th>
+                    <th className="text-right px-5 py-3">
+                      <SortHeader field="revenue">Выручка</SortHeader>
+                    </th>
+                    <th className="text-right px-5 py-3">Доля</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {sources.map((s: any) => {
+                    const share = totalRevenue > 0 ? Math.round((s.revenue / totalRevenue) * 100) : 0
+                    return (
+                      <tr key={s.source} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">{s.source_label}</td>
+                        <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{s.orders}</td>
+                        <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{s.clients}</td>
+                        <td className="px-5 py-3 text-right font-medium text-gray-900 dark:text-gray-100">
+                          {s.revenue.toLocaleString()} ₽
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{share}%</span>
+                            <div className="w-16 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary-500 rounded-full"
+                                style={{ width: `${share}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {sources.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
+                        Нет данных за выбранный период
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {sources.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Выручка по источникам</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={sources}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                  <XAxis dataKey="source_label" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                  <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={(v) => `${v / 1000}k`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    formatter={(value: number) => [`${value.toLocaleString()} ₽`, 'Выручка']}
+                  />
+                  <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* RFM Tab */}
       {activeTab === 'rfm' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -129,7 +309,7 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
-                  data={rfmData}
+                  data={rfmChartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -137,7 +317,7 @@ export default function AnalyticsPage() {
                   paddingAngle={3}
                   dataKey="count"
                 >
-                  {rfmData.map((entry, index) => (
+                  {rfmChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -148,7 +328,7 @@ export default function AnalyticsPage() {
               </PieChart>
             </ResponsiveContainer>
             <div className="flex flex-wrap gap-3 mt-2 justify-center">
-              {rfmData.map((c) => (
+              {rfmChartData.map((c) => (
                 <div key={c.segment} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
                   {c.segment}
@@ -160,7 +340,7 @@ export default function AnalyticsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Сегменты клиентов</h3>
             <div className="space-y-3">
-              {rfmData.map((segment) => (
+              {rfmChartData.map((segment) => (
                 <div key={segment.segment} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                   <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: segment.color }} />
                   <div className="flex-1">
@@ -181,37 +361,60 @@ export default function AnalyticsPage() {
       {activeTab === 'retention' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Динамика удержания</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Когортный анализ удержания</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={retentionData}>
+              <LineChart data={cohorts}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <XAxis dataKey="cohort" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} unit="%" />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                  formatter={(value: number) => [`${value}%`, '']}
                 />
-                <Line type="monotone" dataKey="new" stroke="#3b82f6" strokeWidth={2} name="Новые" />
-                <Line type="monotone" dataKey="returned" stroke="#10b981" strokeWidth={2} name="Вернувшиеся" />
-                <Line type="monotone" dataKey="churned" stroke="#ef4444" strokeWidth={2} name="Отток" />
+                <Line type="monotone" dataKey="return_1m" stroke="#3b82f6" strokeWidth={2} name="1 мес." />
+                <Line type="monotone" dataKey="return_3m" stroke="#8b5cf6" strokeWidth={2} name="3 мес." />
+                <Line type="monotone" dataKey="return_6m" stroke="#f59e0b" strokeWidth={2} name="6 мес." />
+                <Line type="monotone" dataKey="return_12m" stroke="#10b981" strokeWidth={2} name="12 мес." />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
-              <div className="text-sm text-emerald-600 dark:text-emerald-400">Retention rate</div>
-              <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">68%</div>
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">+5% к прошлому месяцу</div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Когорты по месяцам</h3>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-              <div className="text-sm text-blue-600 dark:text-blue-400">Средний срок жизни</div>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">14 мес.</div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">+2 мес. к прошлому году</div>
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
-              <div className="text-sm text-amber-600 dark:text-amber-400">Время до второго визита</div>
-              <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">45 дн.</div>
-              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">-8 дн. к прошлому кварталу</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-700/50">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Когорта</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Клиентов</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">1 мес.</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">3 мес.</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">6 мес.</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">12 мес.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {cohorts.map((c: any) => (
+                    <tr key={c.cohort} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">{c.cohort}</td>
+                      <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{c.initial}</td>
+                      <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{c.return_1m}%</td>
+                      <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{c.return_3m}%</td>
+                      <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{c.return_6m}%</td>
+                      <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{c.return_12m}%</td>
+                    </tr>
+                  ))}
+                  {cohorts.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
+                        Нет данных для анализа удержания
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -223,15 +426,15 @@ export default function AnalyticsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Выручка по типам услуг</h3>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={revenueByService} layout="vertical">
+              <BarChart data={revenueItems} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
-                <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={100} />
+                <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={(v) => `${v / 1000}k`} />
+                <YAxis dataKey="service_name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                  formatter={(value: number) => [`${value}%`, 'Доля']}
+                  formatter={(value: number) => [`${value.toLocaleString()} ₽`, 'Выручка']}
                 />
-                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -239,29 +442,28 @@ export default function AnalyticsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Топ услуг по выручке</h3>
             <div className="space-y-3">
-              {[
-                { name: 'ТО-1 (замена масла + фильтры)', revenue: 485000, orders: 42, growth: '+15%' },
-                { name: 'Диагностика подвески', revenue: 320000, orders: 28, growth: '+8%' },
-                { name: 'Ремонт тормозной системы', revenue: 280000, orders: 22, growth: '+22%' },
-                { name: 'Шиномонтаж (комплект)', revenue: 195000, orders: 35, growth: '+5%' },
-                { name: 'Замена ГРМ', revenue: 168000, orders: 12, growth: '-3%' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+              {revenueItems.slice(0, 5).map((item: any, i: number) => (
+                <div key={item.service_name} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                   <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-sm font-bold text-primary-700 dark:text-primary-300">
                     {i + 1}
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">{item.name}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{item.service_name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{item.orders} заказов</div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-gray-900 dark:text-gray-100">{item.revenue.toLocaleString()} ₽</div>
-                    <div className={`text-xs ${item.growth.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {item.growth}
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {revenueTotal > 0 ? Math.round((item.revenue / revenueTotal) * 100) : 0}% от общей
                     </div>
                   </div>
                 </div>
               ))}
+              {revenueItems.length === 0 && (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Нет данных за выбранный период
+                </div>
+              )}
             </div>
           </div>
         </div>
