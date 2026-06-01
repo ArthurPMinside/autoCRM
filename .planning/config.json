@@ -1,0 +1,17 @@
+{
+  "project_name": "autoCRM",
+  "version": "1.0.0",
+  "workflow": {
+    "auto_commit": true,
+    "commit_prefix": "gsd",
+    "plan_review": true,
+    "code_review": true
+  },
+  "structure": {
+    "milestones_dir": ".planning/milestones",
+    "phases_dir": ".planning/phases",
+    "backlog_dir": ".planning/backlog"
+  },
+  "milestone_format": "M{number}: {title}",
+  "phase_format": "{milestone}.{number}: {title}"
+}
