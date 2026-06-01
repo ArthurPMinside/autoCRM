@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Calendar,
@@ -7,37 +8,99 @@ import {
   Wallet,
   Megaphone,
   Package,
-  BarChart3,
   Settings,
   LogOut,
   Wrench,
   UserCheck,
   Banknote,
   Briefcase,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 
-const menuItems = [
-  { path: '/', icon: Calendar, label: 'Расписание' },
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Дашборд' },
-  { path: '/clients', icon: Users, label: 'Клиенты' },
-  { path: '/workorders', icon: ClipboardList, label: 'Заказы' },
-  { path: '/services', icon: Briefcase, label: 'Услуги' },
-  { path: '/finance', icon: Wallet, label: 'Финансы' },
-  { path: '/marketing', icon: Megaphone, label: 'Маркетинг' },
-  { path: '/warehouse', icon: Package, label: 'Склад' },
-  { path: '/analytics', icon: BarChart3, label: 'Аналитика' },
-  { path: '/staff', icon: UserCheck, label: 'Механики' },
-  { path: '/salary', icon: Banknote, label: 'Зарплаты' },
-  { path: '/settings', icon: Settings, label: 'Настройки' },
+interface SubItem {
+  path: string
+  label: string
+}
+
+interface MenuGroup {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  path?: string
+  items?: SubItem[]
+}
+
+const menuGroups: MenuGroup[] = [
+  {
+    label: 'Расписание',
+    icon: Calendar,
+    items: [
+      { path: '/', label: 'Расписание' },
+      { path: '/workorders', label: 'Заказы' },
+    ],
+  },
+  {
+    label: 'Клиенты',
+    icon: Users,
+    path: '/clients',
+  },
+  {
+    label: 'Каталог',
+    icon: Briefcase,
+    items: [
+      { path: '/services', label: 'Услуги' },
+      { path: '/warehouse', label: 'Склад' },
+      { path: '/staff', label: 'Механики' },
+    ],
+  },
+  {
+    label: 'Финансы',
+    icon: Wallet,
+    items: [
+      { path: '/finance', label: 'Финансы' },
+      { path: '/salary', label: 'Зарплаты' },
+      { path: '/marketing', label: 'Маркетинг' },
+    ],
+  },
+  {
+    label: 'Отчёты',
+    icon: LayoutDashboard,
+    items: [
+      { path: '/dashboard', label: 'Дашборд' },
+      { path: '/settings', label: 'Настройки' },
+    ],
+  },
 ]
 
 export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
 
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    menuGroups.forEach((group) => {
+      if (group.items) {
+        initial[group.label] = group.items.some(
+          (item) => location.pathname === item.path
+        )
+      }
+    })
+    return initial
+  })
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }))
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     window.location.href = '/login'
+  }
+
+  const isGroupActive = (group: MenuGroup) => {
+    if (group.path) return location.pathname === group.path
+    if (group.items) return group.items.some((item) => location.pathname === item.path)
+    return false
   }
 
   return (
@@ -55,21 +118,68 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path
+        {menuGroups.map((group) => {
+          const groupActive = isGroupActive(group)
+          const isExpanded = expandedGroups[group.label] || false
+
+          if (group.path) {
+            return (
+              <button
+                key={group.label}
+                onClick={() => navigate(group.path!)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  groupActive
+                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <group.icon className="w-4 h-4" />
+                {group.label}
+              </button>
+            )
+          }
+
           return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </button>
+            <div key={group.label}>
+              <button
+                onClick={() => toggleGroup(group.label)}
+                className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  groupActive
+                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <group.icon className="w-4 h-4" />
+                  {group.label}
+                </div>
+                {isExpanded ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+              {isExpanded && group.items && (
+                <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+                  {group.items.map((item) => {
+                    const isActive = location.pathname === item.path
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => navigate(item.path)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive
+                            ? 'text-primary-700 dark:text-primary-300 font-medium'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )
         })}
       </nav>
