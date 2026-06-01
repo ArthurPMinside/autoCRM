@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Loader2, X, ChevronDown, ChevronUp, Clock, CheckCircle, AlertCircle, ClipboardList as ClipboardListIcon, MessageSquare, Printer, User } from 'lucide-react'
+import { Plus, Search, Loader2, X, ChevronDown, ChevronUp, Clock, CheckCircle, AlertCircle, ClipboardList as ClipboardListIcon, MessageSquare, Printer, User, Trash2 } from 'lucide-react'
 import { workOrdersApi } from '../api/workOrders'
 import { staffApi } from '../api/staff'
 import { smsApi } from '../api/sms'
@@ -277,6 +277,22 @@ export default function WorkOrdersPage() {
                       </button>
                     </>
                   )}
+                  <button
+                    onClick={() => {
+                      if (confirm('Удалить заказ-наряд?')) {
+                        workOrdersApi.delete(order.id).then(() => {
+                          addToast('Заказ удален', 'success')
+                          queryClient.invalidateQueries({ queryKey: ['workOrders'] })
+                        }).catch(() => {
+                          addToast('Ошибка при удалении заказа', 'error')
+                        })
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs hover:bg-red-100 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Удалить
+                  </button>
                   <button
                     onClick={() => sendSmsMutation.mutate({
                       phone: order.client?.phone,
