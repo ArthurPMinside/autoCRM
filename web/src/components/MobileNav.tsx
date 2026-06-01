@@ -11,8 +11,8 @@ const mobileGroups = [
 
 const allPages = [
   { path: '/', label: 'Расписание', group: 'Расписание' },
-  { path: '/workorders', label: 'Заказы', group: 'Расписание' },
   { path: '/clients', label: 'Клиенты', group: 'Клиенты' },
+  { path: '/workorders', label: 'Заказы', group: 'Клиенты' },
   { path: '/services', label: 'Услуги', group: 'Каталог' },
   { path: '/warehouse', label: 'Склад', group: 'Каталог' },
   { path: '/staff', label: 'Механики', group: 'Каталог' },

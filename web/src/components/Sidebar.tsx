@@ -34,15 +34,15 @@ const menuGroups: MenuGroup[] = [
   {
     label: 'Расписание',
     icon: Calendar,
-    items: [
-      { path: '/', label: 'Расписание' },
-      { path: '/workorders', label: 'Заказы' },
-    ],
+    path: '/',
   },
   {
     label: 'Клиенты',
     icon: Users,
-    path: '/clients',
+    items: [
+      { path: '/clients', label: 'Клиенты' },
+      { path: '/workorders', label: 'Заказы' },
+    ],
   },
   {
     label: 'Каталог',
