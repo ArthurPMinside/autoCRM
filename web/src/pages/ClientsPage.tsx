@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Phone, Mail, Car, Loader2, X, ChevronRight, Users as UsersIcon } from 'lucide-react'
 import { clientsApi } from '../api/clients'
 import { useToastStore } from '../components/Toast'
+import VehicleSelector from '../components/VehicleSelector'
 
 interface Client {
   id: string
@@ -35,6 +36,9 @@ export default function ClientsPage() {
     onSuccess: () => {
       addToast('Клиент добавлен', 'success')
       setShowCreate(false)
+      setShowNewVehicle(false)
+      setNewClient({ name: '', phone: '', email: '' })
+      setNewVehicle({ make: '', model: '', year: new Date().getFullYear(), license_plate: '', vin: '' })
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
     onError: () => {
@@ -75,6 +79,8 @@ export default function ClientsPage() {
   ) || []
 
   const [newClient, setNewClient] = useState({ name: '', phone: '', email: '' })
+  const [showNewVehicle, setShowNewVehicle] = useState(false)
+  const [newVehicle, setNewVehicle] = useState({ make: '', model: '', year: new Date().getFullYear(), license_plate: '', vin: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editClient, setEditClient] = useState({ name: '', phone: '', email: '' })
 
@@ -151,7 +157,7 @@ export default function ClientsPage() {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 space-y-4 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Новый клиент</h3>
               <button onClick={() => setShowCreate(false)}><X className="w-5 h-5 text-gray-400" /></button>
@@ -184,10 +190,37 @@ export default function ClientsPage() {
                 placeholder="client@example.com"
               />
             </div>
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-4 mt-2">
+              {!showNewVehicle ? (
+                <button
+                  onClick={() => setShowNewVehicle(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600"
+                >
+                  <Plus className="w-4 h-4" />
+                  Добавить авто
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Автомобиль клиента</h4>
+                  <VehicleSelector value={newVehicle} onChange={setNewVehicle} />
+                  <button
+                    onClick={() => setShowNewVehicle(false)}
+                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    Убрать авто
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm">Отмена</button>
+              <button onClick={() => { setShowCreate(false); setShowNewVehicle(false); setNewClient({ name: '', phone: '', email: '' }); setNewVehicle({ make: '', model: '', year: new Date().getFullYear(), license_plate: '', vin: '' }) }} className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm">Отмена</button>
               <button
-                onClick={() => createMutation.mutate(newClient)}
+                onClick={() => createMutation.mutate({
+                  ...newClient,
+                  vehicles: showNewVehicle && newVehicle.make && newVehicle.model && newVehicle.license_plate
+                    ? [newVehicle]
+                    : []
+                })}
                 disabled={!newClient.name || !newClient.phone}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
               >
@@ -274,7 +307,7 @@ export default function ClientsPage() {
       {/* Edit Modal */}
       {showEdit && selectedClient && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 space-y-4 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Редактировать клиента</h3>
               <button onClick={() => setShowEdit(false)}><X className="w-5 h-5 text-gray-400" /></button>

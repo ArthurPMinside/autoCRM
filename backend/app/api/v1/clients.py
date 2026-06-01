@@ -9,10 +9,18 @@ from typing import Optional, List
 
 router = APIRouter()
 
+class VehicleCreateInput(BaseModel):
+    make: str
+    model: str
+    year: Optional[int] = None
+    license_plate: Optional[str] = None
+    vin: Optional[str] = None
+
 class ClientCreate(BaseModel):
     name: str
     phone: str
     email: Optional[str] = None
+    vehicles: List[VehicleCreateInput] = []
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
@@ -59,6 +67,24 @@ def create_client(data: ClientCreate, db: Session = Depends(get_db)):
     db.add(client)
     db.commit()
     db.refresh(client)
+    
+    created_vehicles = []
+    for v in data.vehicles:
+        vehicle = Vehicle(
+            client_id=client.id,
+            make=v.make,
+            model=v.model,
+            year=v.year,
+            license_plate=v.license_plate,
+            vin=v.vin,
+        )
+        db.add(vehicle)
+        created_vehicles.append(vehicle)
+    if created_vehicles:
+        db.commit()
+        for v in created_vehicles:
+            db.refresh(v)
+    
     return ClientResponse(
         id=client.id,
         name=client.name,
@@ -68,7 +94,7 @@ def create_client(data: ClientCreate, db: Session = Depends(get_db)):
         total_revenue=0.0,
         last_visit=None,
         created_at=client.created_at.isoformat(),
-        vehicles=[],
+        vehicles=[{"id": v.id, "make": v.make, "model": v.model, "year": v.year, "license_plate": v.license_plate} for v in created_vehicles],
     )
 
 @router.get("/{client_id}", response_model=ClientResponse)
