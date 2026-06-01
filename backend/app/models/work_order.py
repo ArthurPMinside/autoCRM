@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Numeric, Text, ForeignKey
+from sqlalchemy import Column, String, DateTime, Numeric, Text, ForeignKey, Boolean
 from app.models.base import Base, GUID
 from datetime import datetime
 
@@ -16,5 +16,6 @@ class WorkOrder(Base):
     source = Column(String(30), default="direct")
     scheduled_date = Column(DateTime)
     completed_date = Column(DateTime)
+    is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

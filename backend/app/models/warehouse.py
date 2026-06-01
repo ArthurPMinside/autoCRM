@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, Numeric, ForeignKey
+from sqlalchemy import Column, String, DateTime, Integer, Numeric, ForeignKey, Boolean
 from app.models.base import Base, GUID
 from datetime import datetime
 
@@ -13,6 +13,7 @@ class Part(Base):
     price = Column(Numeric(10, 2), default=0)
     supplier = Column(String(255))
     location = Column(String(100))
+    is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -48,7 +48,7 @@ class WorkOrderResponse(BaseModel):
 
 @router.get("/", response_model=List[WorkOrderResponse])
 def get_work_orders(db: Session = Depends(get_db)):
-    orders = db.query(WorkOrder).all()
+    orders = db.query(WorkOrder).filter(WorkOrder.is_deleted == False).all()
     result = []
     for order in orders:
         client = db.query(Client).filter(Client.id == order.client_id).first()
@@ -183,3 +183,12 @@ def update_status(order_id: str, status: dict, db: Session = Depends(get_db)):
         order.completed_date = datetime.utcnow()
     db.commit()
     return {"status": "ok"}
+
+@router.delete("/{order_id}")
+def delete_work_order(order_id: str, db: Session = Depends(get_db)):
+    order = db.query(WorkOrder).filter(WorkOrder.id == order_id, WorkOrder.is_deleted == False).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.is_deleted = True
+    db.commit()
+    return {"status": "deleted"}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, Numeric
+from sqlalchemy import Column, String, DateTime, Integer, Numeric, Boolean
 from app.models.base import Base, GUID
 from datetime import datetime
 
@@ -12,5 +12,6 @@ class Client(Base):
     total_visits = Column(Integer, default=0)
     total_revenue = Column(Numeric(12, 2), default=0)
     last_visit = Column(DateTime)
+    is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
