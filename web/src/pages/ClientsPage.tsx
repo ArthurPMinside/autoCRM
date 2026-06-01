@@ -42,6 +42,32 @@ export default function ClientsPage() {
     },
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => clientsApi.update(id, data),
+    onSuccess: () => {
+      addToast('Клиент обновлен', 'success')
+      setShowEdit(false)
+      setSelectedClient(null)
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+    onError: () => {
+      addToast('Ошибка при обновлении клиента', 'error')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: clientsApi.delete,
+    onSuccess: () => {
+      addToast('Клиент удален', 'success')
+      setSelectedClient(null)
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.detail || 'Ошибка при удалении клиента'
+      addToast(msg, 'error')
+    },
+  })
+
   const filteredClients = clients?.filter((c: Client) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.phone.includes(search) ||
@@ -49,6 +75,8 @@ export default function ClientsPage() {
   ) || []
 
   const [newClient, setNewClient] = useState({ name: '', phone: '', email: '' })
+  const [showEdit, setShowEdit] = useState(false)
+  const [editClient, setEditClient] = useState({ name: '', phone: '', email: '' })
 
   if (isLoading) {
     return (
@@ -178,6 +206,27 @@ export default function ClientsPage() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedClient.name}</h3>
               <button onClick={() => setSelectedClient(null)}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setEditClient({ name: selectedClient.name, phone: selectedClient.phone, email: selectedClient.email })
+                  setShowEdit(true)
+                }}
+                className="flex-1 px-3 py-2 bg-primary-50 text-primary-700 rounded-lg text-sm hover:bg-primary-100 transition-colors"
+              >
+                Редактировать
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Удалить клиента? Это действие нельзя отменить.')) {
+                    deleteMutation.mutate(selectedClient.id)
+                  }
+                }}
+                className="flex-1 px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm hover:bg-red-100 transition-colors"
+              >
+                Удалить
+              </button>
+            </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Phone className="w-4 h-4" />
@@ -222,6 +271,53 @@ export default function ClientsPage() {
           </div>
         </div>
       )}
+      {/* Edit Modal */}
+      {showEdit && selectedClient && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Редактировать клиента</h3>
+              <button onClick={() => setShowEdit(false)}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ФИО *</label>
+              <input
+                value={editClient.name}
+                onChange={(e) => setEditClient({ ...editClient, name: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Телефон *</label>
+              <input
+                value={editClient.phone}
+                onChange={(e) => setEditClient({ ...editClient, phone: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+              <input
+                type="email"
+                value={editClient.email}
+                onChange={(e) => setEditClient({ ...editClient, email: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={() => setShowEdit(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm">Отмена</button>
+              <button
+                onClick={() => updateMutation.mutate({ id: selectedClient.id, data: editClient })}
+                disabled={!editClient.name || !editClient.phone}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
+              >
+                {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
