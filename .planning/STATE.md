@@ -34,7 +34,7 @@
 2. **Orphaned schemas** — `app/schemas/` has rich Pydantic models never imported.
 3. **Hardcoded SECRET_KEY** — in both `core/security.py` and `core/config.py`.
 4. **No migrations** — Alembic configured but zero versions.
-5. **Mock data pages** — Marketing and Warehouse frontend pages don't call real APIs.
+5. **Mock data pages** — Marketing frontend page doesn't call real APIs. Warehouse PartMovements tab not yet implemented.
 6. **Missing CRUD** — Several entities lack full CRUD.
 
 ### Environment
@@ -48,3 +48,5 @@
 
 ## Completed Milestones
 - v1.0.0 MVP: All core CRM features working
+- Phase 1.1: CRUD Operations (soft delete, edit/delete for Clients/Warehouse/WorkOrders)
+- Phase 1.3: Real Analytics Data (RFM, retention, revenue, sources, activity feed)
