@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.work_order import WorkOrder
 from app.models.client import Client
+from app.models.service import Service
 from app.models.transaction import Transaction
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 router = APIRouter()
 
@@ -99,3 +100,24 @@ def get_dashboard(
         "week_expenses": week_expense,
         "week_profit": week_income - week_expense,
     }
+
+
+@router.get("/activity")
+def get_activity(db: Session = Depends(get_db)):
+    """Recent activity: last 10 work orders."""
+    orders = db.query(WorkOrder).filter(WorkOrder.is_deleted == False).order_by(WorkOrder.created_at.desc()).limit(10).all()
+    
+    result = []
+    for o in orders:
+        client = db.query(Client).filter(Client.id == o.client_id).first()
+        service = db.query(Service).filter(Service.id == o.service_id).first()
+        result.append({
+            "id": o.id,
+            "client_name": client.name if client else "Unknown",
+            "service_name": service.name if service else "Unknown",
+            "status": o.status,
+            "total_cost": float(o.total_cost or 0),
+            "created_at": o.created_at.isoformat() if o.created_at else None,
+        })
+    
+    return result

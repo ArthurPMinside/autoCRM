@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from app.db.database import get_db
 from app.models.client import Client
 from app.models.work_order import WorkOrder
+from app.models.service import Service
 from app.models.transaction import Transaction
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 router = APIRouter()
 
@@ -77,22 +78,50 @@ def get_rfm(
     end_date: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Client)
+    """RFM segmentation based on actual work orders."""
+    query = db.query(WorkOrder).filter(WorkOrder.is_deleted == False)
     start = _parse_date_flexible(start_date)
     end = _parse_date_flexible(end_date, end_of_day=True)
-    if start and end and end < start:
-        start, end = end, start
     if start:
-        query = query.filter(Client.created_at >= start)
+        query = query.filter(WorkOrder.created_at >= start)
     if end:
-        query = query.filter(Client.created_at <= end)
-    clients = query.all()
-    return {
-        "champions": len([c for c in clients if (c.total_visits or 0) >= 5]),
-        "loyal": len([c for c in clients if 3 <= (c.total_visits or 0) < 5]),
-        "potential": len([c for c in clients if 1 <= (c.total_visits or 0) < 3]),
-        "at_risk": len([c for c in clients if (c.total_visits or 0) == 0]),
-    }
+        query = query.filter(WorkOrder.created_at <= end)
+    
+    orders = query.all()
+    
+    # Calculate RFM per client
+    client_stats: Dict[str, dict] = {}
+    for o in orders:
+        cid = o.client_id
+        if cid not in client_stats:
+            client_stats[cid] = {"recency": o.created_at, "frequency": 0, "monetary": 0}
+        client_stats[cid]["frequency"] += 1
+        client_stats[cid]["monetary"] += float(o.total_cost or 0)
+        if o.created_at > client_stats[cid]["recency"]:
+            client_stats[cid]["recency"] = o.created_at
+    
+    now = datetime.utcnow()
+    segments = {"champions": 0, "loyal": 0, "potential": 0, "new": 0, "at_risk": 0, "lost": 0}
+    
+    for cid, stats in client_stats.items():
+        days_since_last = (now - stats["recency"]).days
+        freq = stats["frequency"]
+        mon = stats["monetary"]
+        
+        if days_since_last <= 30 and freq >= 3 and mon >= 10000:
+            segments["champions"] += 1
+        elif days_since_last <= 60 and freq >= 2:
+            segments["loyal"] += 1
+        elif days_since_last <= 90 and freq == 1:
+            segments["new"] += 1
+        elif days_since_last <= 90 and freq >= 2:
+            segments["potential"] += 1
+        elif days_since_last <= 180:
+            segments["at_risk"] += 1
+        else:
+            segments["lost"] += 1
+    
+    return segments
 
 
 @router.get("/revenue")
@@ -102,42 +131,99 @@ def get_revenue(
     end_date: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Transaction).filter(Transaction.type == "income")
+    """Revenue grouped by service type."""
+    query = db.query(
+        WorkOrder.service_id,
+        Service.name.label("service_name"),
+        func.count(WorkOrder.id).label("order_count"),
+        func.sum(WorkOrder.total_cost).label("total_revenue"),
+    ).join(Service, WorkOrder.service_id == Service.id).filter(WorkOrder.is_deleted == False)
+    
     start = _parse_date_flexible(start_date)
     end = _parse_date_flexible(end_date, end_of_day=True)
     if start and end and end < start:
         start, end = end, start
     if start:
-        query = query.filter(Transaction.date >= start)
+        query = query.filter(WorkOrder.created_at >= start)
     if end:
-        query = query.filter(Transaction.date <= end)
-    txs = query.all()
-    return {"total": sum(float(t.amount) for t in txs), "count": len(txs)}
+        query = query.filter(WorkOrder.created_at <= end)
+    
+    results = query.group_by(WorkOrder.service_id, Service.name).all()
+    
+    items = []
+    for r in results:
+        items.append({
+            "service_name": r.service_name or "Unknown",
+            "orders": r.order_count or 0,
+            "revenue": float(r.total_revenue or 0),
+        })
+    
+    return {
+        "items": items,
+        "total_revenue": sum(i["revenue"] for i in items),
+        "total_orders": sum(i["orders"] for i in items),
+    }
 
 
 @router.get("/retention")
 def get_retention(
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Client)
-    start = _parse_date_flexible(start_date)
-    end = _parse_date_flexible(end_date, end_of_day=True)
-    if start and end and end < start:
-        start, end = end, start
-    if start:
-        query = query.filter(Client.created_at >= start)
-    if end:
-        query = query.filter(Client.created_at <= end)
-    clients = query.all()
-    returning = len([c for c in clients if (c.total_visits or 0) > 1])
-    total = len(clients)
-    return {
-        "rate": round(returning / total * 100, 1) if total else 0,
-        "returning": returning,
-        "total": total,
-    }
+    """Cohort retention analysis based on first order month."""
+    # Get all orders with client info
+    orders = db.query(WorkOrder).filter(WorkOrder.is_deleted == False).order_by(WorkOrder.created_at).all()
+    
+    # Group by client: find first order month
+    client_first_order: Dict[str, datetime] = {}
+    for o in orders:
+        cid = o.client_id
+        if cid not in client_first_order or o.created_at < client_first_order[cid]:
+            client_first_order[cid] = o.created_at
+    
+    # Group clients by cohort (first order month)
+    from collections import defaultdict
+    cohorts: Dict[str, list] = defaultdict(list)
+    for cid, first_order in client_first_order.items():
+        cohort_key = first_order.strftime("%Y-%m")
+        cohorts[cohort_key].append(cid)
+    
+    # Calculate retention for each cohort
+    cohort_data = []
+    for cohort_month in sorted(cohorts.keys())[-12:]:  # Last 12 months
+        client_ids = cohorts[cohort_month]
+        initial_count = len(client_ids)
+        
+        # Count returning clients at 1, 3, 6, 12 months
+        return_1m = 0
+        return_3m = 0
+        return_6m = 0
+        return_12m = 0
+        
+        for cid in client_ids:
+            first = client_first_order[cid]
+            client_orders = [o for o in orders if o.client_id == cid and o.created_at > first]
+            
+            for o in client_orders:
+                days = (o.created_at - first).days
+                if days <= 30:
+                    return_1m += 1
+                if days <= 90:
+                    return_3m += 1
+                if days <= 180:
+                    return_6m += 1
+                if days <= 365:
+                    return_12m += 1
+        
+        cohort_data.append({
+            "cohort": cohort_month,
+            "initial": initial_count,
+            "return_1m": round(return_1m / initial_count * 100, 1) if initial_count else 0,
+            "return_3m": round(return_3m / initial_count * 100, 1) if initial_count else 0,
+            "return_6m": round(return_6m / initial_count * 100, 1) if initial_count else 0,
+            "return_12m": round(return_12m / initial_count * 100, 1) if initial_count else 0,
+        })
+    
+    return {"cohorts": cohort_data}
 
 
 @router.get("/sources")
