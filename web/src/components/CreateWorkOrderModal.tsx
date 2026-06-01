@@ -6,6 +6,7 @@ import { clientsApi } from '../api/clients'
 import { vehiclesApi } from '../api/vehicles'
 import { servicesApi } from '../api/services'
 import { useToastStore } from './Toast'
+import VehicleSelector from './VehicleSelector'
 
 interface Props {
   onClose: () => void
@@ -26,7 +27,7 @@ export default function CreateWorkOrderModal({ onClose, initialDate }: Props) {
   const [showNewClient, setShowNewClient] = useState(false)
   const [newClient, setNewClient] = useState({ name: '', phone: '', email: '' })
   const [showNewVehicle, setShowNewVehicle] = useState(false)
-  const [newVehicle, setNewVehicle] = useState({ make: '', model: '', year: '', license_plate: '', vin: '' })
+  const [newVehicle, setNewVehicle] = useState({ make: '', model: '', year: new Date().getFullYear(), license_plate: '', vin: '' })
 
   const { data: clients } = useQuery({
     queryKey: ['clients'],
@@ -235,19 +236,11 @@ export default function CreateWorkOrderModal({ onClose, initialDate }: Props) {
             ) : (
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900 dark:text-gray-100">Новое авто ({selectedClient?.name})</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <input placeholder="Марка *" value={newVehicle.make} onChange={(e) => setNewVehicle({ ...newVehicle, make: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
-                  <input placeholder="Модель *" value={newVehicle.model} onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input placeholder="Год" value={newVehicle.year} onChange={(e) => setNewVehicle({ ...newVehicle, year: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
-                  <input placeholder="Гос. номер *" value={newVehicle.license_plate} onChange={(e) => setNewVehicle({ ...newVehicle, license_plate: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
-                </div>
-                <input placeholder="VIN" value={newVehicle.vin} onChange={(e) => setNewVehicle({ ...newVehicle, vin: e.target.value })} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100" />
-                <div className="flex gap-2">
-                  <button onClick={() => setShowNewVehicle(false)} className="flex-1 py-2 text-sm text-gray-600">Отмена</button>
+                <VehicleSelector value={newVehicle} onChange={setNewVehicle} />
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setShowNewVehicle(false)} className="flex-1 py-2 text-sm text-gray-600 dark:text-gray-300">Отмена</button>
                   <button
-                    onClick={() => createVehicleMutation.mutate({ ...newVehicle, client_id: clientId, year: Number(newVehicle.year) || new Date().getFullYear() })}
+                    onClick={() => createVehicleMutation.mutate({ ...newVehicle, client_id: clientId })}
                     disabled={!newVehicle.make || !newVehicle.model || !newVehicle.license_plate}
                     className="flex-1 py-2 bg-primary-600 text-white rounded-lg text-sm disabled:opacity-50"
                   >

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, clients, vehicles, services, work_orders, finance, warehouse, analytics, dashboard, staff, sms, receipts, telegram
+from app.api.v1 import auth, clients, vehicles, services, work_orders, finance, warehouse, analytics, dashboard, staff, sms, receipts, telegram, catalog
 from app.db.database import engine, Base
 import uvicorn
 
@@ -33,6 +33,7 @@ app.include_router(staff.router, prefix="/api/v1/staff", tags=["staff"])
 app.include_router(sms.router, prefix="/api/v1/sms", tags=["sms"])
 app.include_router(receipts.router, prefix="/api/v1/receipts", tags=["receipts"])
 app.include_router(telegram.router, prefix="/api/v1/telegram", tags=["telegram"])
+app.include_router(catalog.router, prefix="/api/v1/catalog", tags=["catalog"])
 
 @app.get("/")
 def root():
