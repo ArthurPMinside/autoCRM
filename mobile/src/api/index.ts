@@ -1,8 +1,9 @@
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import Constants from 'expo-constants'
 
-const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://192.168.1.15:8001/api/v1'
+// Для Android эмулятора используем 10.0.2.2 (адрес хоста из эмулятора)
+// Для реального устройства поменяйте на LAN IP компьютера
+const API_URL = 'http://10.0.2.2:8001/api/v1'
 
 const api = axios.create({
   baseURL: API_URL,
@@ -16,6 +17,7 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
   return config
 })
 

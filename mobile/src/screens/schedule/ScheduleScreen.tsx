@@ -20,6 +20,7 @@ import { ChevronLeft, ChevronRight, Plus, Clock, User } from 'lucide-react-nativ
 const START_HOUR = 8
 const END_HOUR = 20
 const SLOT_MINUTES = 60
+const SLOT_HEIGHT = 60
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 function getWeekStart(date: Date): Date {
@@ -154,21 +155,6 @@ export function ScheduleScreen() {
     return result
   }, [orders, weekStart])
 
-  const getOrdersForSlot = (dayIndex: number, slotTime: string): ScheduledOrder[] => {
-    const slotMinutes = timeToMinutes(slotTime)
-    return ordersByDay[dayIndex].filter(
-      (o) => o.startMinutes <= slotMinutes && slotMinutes < o.endMinutes
-    )
-  }
-
-  const isFirstSlotForOrder = (order: ScheduledOrder, slotTime: string): boolean => {
-    const slotMinutes = timeToMinutes(slotTime)
-    return (
-      order.startMinutes <= slotMinutes &&
-      slotMinutes < order.startMinutes + SLOT_MINUTES
-    )
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -216,8 +202,6 @@ export function ScheduleScreen() {
   }, [orders, weekStart])
 
   const handleSlotPress = (dayIndex: number, time: string) => {
-    const slotOrders = getOrdersForSlot(dayIndex, time)
-    if (slotOrders.length > 0) return // don't open if occupied
     const slotDate = addDays(weekStart, dayIndex)
     const [slotHour] = time.split(':').map(Number)
     const slotDateTime = new Date(slotDate)
@@ -231,7 +215,7 @@ export function ScheduleScreen() {
 
   const handleOrderPress = (order: ScheduledOrder) => {
     ;(navigation as any).navigate('WorkOrders', {
-      screen: 'WorkOrderDetail',
+      screen: 'WorkOrderForm',
       params: { id: order.id },
     })
   }
@@ -244,6 +228,9 @@ export function ScheduleScreen() {
       params: { initialDate: initialDateStr },
     })
   }
+
+  const dayOrders = ordersByDay[selectedDayIndex]
+  const scheduleHeight = (END_HOUR - START_HOUR) * SLOT_HEIGHT
 
   if (ordersLoading && !orders) {
     return (
@@ -341,130 +328,126 @@ export function ScheduleScreen() {
         })}
       </ScrollView>
 
-      {/* Time Slots for selected day */}
-      <View style={styles.slotsContainer}>
-        {timeSlots.map((time) => {
-          const slotOrders = getOrdersForSlot(selectedDayIndex, time)
-          const startingOrders = slotOrders.filter((o) =>
-            isFirstSlotForOrder(o, time)
-          )
-          const continuingOrders = slotOrders.filter(
-            (o) => !isFirstSlotForOrder(o, time)
-          )
-          const isOccupied = slotOrders.length > 0
-
-          return (
-            <View
-              key={time}
-              style={[
-                styles.slotRow,
-                isOccupied && styles.slotRowOccupied,
-              ]}
-            >
-              <View style={styles.timeCell}>
-                <Clock size={14} color={Colors.textMuted} />
-                <Text style={styles.timeText}>{time}</Text>
-              </View>
-              <View style={styles.ordersCell}>
-                {/* Continuing orders — thin colored bar */}
-                {continuingOrders.map((order) => {
-                  const colors = getStatusColor(order.status)
-                  return (
-                    <TouchableOpacity
-                      key={`cont-${order.id}`}
-                      style={[
-                        styles.continuingBar,
-                        { backgroundColor: colors.bg, borderColor: colors.border },
-                      ]}
-                      onPress={() => handleOrderPress(order)}
-                    >
-                      <View style={[styles.continuingLine, { backgroundColor: colors.border }]} />
-                      <Text style={[styles.continuingLabel, { color: colors.text }]}>
-                        {order.client?.name?.split(' ')[0] || 'Клиент'}
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                })}
-
-                {/* Starting orders — full card */}
-                {startingOrders.map((order) => {
-                  const colors = getStatusColor(order.status)
-                  return (
-                    <TouchableOpacity
-                      key={order.id}
-                      style={[
-                        styles.orderCard,
-                        { backgroundColor: colors.bg, borderColor: colors.border },
-                      ]}
-                      onPress={() => handleOrderPress(order)}
-                    >
-                      <View style={styles.orderHeader}>
-                        <View
-                          style={[
-                            styles.statusDot,
-                            {
-                              backgroundColor:
-                                order.status === 'in_progress'
-                                  ? Colors.info
-                                  : order.status === 'completed'
-                                  ? Colors.success
-                                  : order.status === 'cancelled'
-                                  ? Colors.danger
-                                  : Colors.warning,
-                            },
-                          ]}
-                        />
-                        <Text style={[styles.orderClient, { color: colors.text }]}>
-                          {order.client?.name?.split(' ')[0] || 'Клиент'}
-                        </Text>
-                      </View>
-                      <Text style={[styles.orderVehicle, { color: colors.text }]}>
-                        {order.vehicle?.make} {order.vehicle?.model}
-                      </Text>
-                      {getStaffName(order.staff_id) && (
-                        <View style={styles.orderStaffRow}>
-                          <User size={10} color={colors.text} />
-                          <Text style={[styles.orderStaff, { color: colors.text }]}>
-                            {getStaffName(order.staff_id)}
-                          </Text>
-                        </View>
-                      )}
-                      <View style={styles.orderFooter}>
-                        <Text style={[styles.orderCost, { color: colors.text }]}>
-                          {formatCurrency(order.total_cost || 0)}
-                        </Text>
-                        <Text style={[styles.orderDuration, { color: colors.text }]}>
-                          {order.durationHours}ч
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          { backgroundColor: colors.border },
-                        ]}
-                      >
-                        <Text style={[styles.statusBadgeText, { color: colors.text }]}>
-                          {getStatusLabel(order.status)}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  )
-                })}
-
-                {/* Empty slot — clickable to add */}
-                {!isOccupied && (
-                  <TouchableOpacity
-                    style={styles.emptySlotArea}
-                    onPress={() => handleSlotPress(selectedDayIndex, time)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.emptySlot}>+ Добавить</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+      {/* Schedule Grid */}
+      <View style={styles.scheduleGrid}>
+        {/* Time labels column */}
+        <View style={styles.timeColumn}>
+          {timeSlots.map((time) => (
+            <View key={time} style={[styles.timeCell, { height: SLOT_HEIGHT }]}>
+              <Clock size={14} color={Colors.textMuted} />
+              <Text style={styles.timeText}>{time}</Text>
             </View>
-          )
-        })}
+          ))}
+        </View>
+
+        {/* Orders column */}
+        <View style={[styles.ordersColumn, { height: scheduleHeight }]}>
+          {/* Hour grid lines */}
+          {timeSlots.map((time, index) => (
+            <View
+              key={`grid-${time}`}
+              style={[
+                styles.gridLine,
+                { top: index * SLOT_HEIGHT },
+              ]}
+            />
+          ))}
+
+          {/* Empty slot click areas */}
+          {timeSlots.map((time, index) => {
+            const slotMinutes = timeToMinutes(time)
+            const hasOrder = dayOrders.some(
+              (o) => o.startMinutes <= slotMinutes && slotMinutes < o.endMinutes
+            )
+            if (hasOrder) return null
+            return (
+              <TouchableOpacity
+                key={`empty-${time}`}
+                style={[
+                  styles.emptySlotArea,
+                  { top: index * SLOT_HEIGHT, height: SLOT_HEIGHT },
+                ]}
+                onPress={() => handleSlotPress(selectedDayIndex, time)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.emptySlot}>+ Добавить</Text>
+              </TouchableOpacity>
+            )
+          })}
+
+          {/* Order cards */}
+          {dayOrders.map((order) => {
+            const colors = getStatusColor(order.status)
+            const top = ((order.startMinutes - START_HOUR * 60) / 60) * SLOT_HEIGHT
+            const height = order.durationHours * SLOT_HEIGHT
+            return (
+              <TouchableOpacity
+                key={order.id}
+                style={[
+                  styles.orderCard,
+                  {
+                    top,
+                    height: height - 4,
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => handleOrderPress(order)}
+                activeOpacity={0.9}
+              >
+                <View style={styles.orderHeader}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor:
+                          order.status === 'in_progress'
+                            ? Colors.info
+                            : order.status === 'completed'
+                            ? Colors.success
+                            : order.status === 'cancelled'
+                            ? Colors.danger
+                            : Colors.warning,
+                      },
+                    ]}
+                  />
+                  <Text style={[styles.orderClient, { color: colors.text }]}>
+                    {order.client?.name?.split(' ')[0] || 'Клиент'}
+                  </Text>
+                </View>
+                <Text style={[styles.orderVehicle, { color: colors.text }]}>
+                  {order.vehicle?.make} {order.vehicle?.model}
+                </Text>
+                {getStaffName(order.staff_id) && (
+                  <View style={styles.orderStaffRow}>
+                    <User size={10} color={colors.text} />
+                    <Text style={[styles.orderStaff, { color: colors.text }]}>
+                      {getStaffName(order.staff_id)}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.orderFooter}>
+                  <Text style={[styles.orderCost, { color: colors.text }]}>
+                    {formatCurrency(order.total_cost || 0)}
+                  </Text>
+                  <Text style={[styles.orderDuration, { color: colors.text }]}>
+                    {order.durationHours}ч
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.statusBadgeText, { color: colors.text }]}>
+                    {getStatusLabel(order.status)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
       </View>
 
       <View style={{ height: 24 }} />
@@ -553,75 +536,74 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayBadgeText: { color: Colors.white, fontSize: 10, fontWeight: '700' },
-  slotsContainer: { marginHorizontal: 16, marginTop: 8, gap: 8 },
-  slotRow: {
+  scheduleGrid: {
+    marginHorizontal: 16,
+    marginTop: 8,
     flexDirection: 'row',
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
   },
-  slotRowOccupied: {
-    backgroundColor: Colors.borderLight,
-    borderColor: Colors.borderLight,
-  },
-  timeCell: {
+  timeColumn: {
     width: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderRightWidth: 1,
     borderRightColor: Colors.borderLight,
+  },
+  timeCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
     backgroundColor: Colors.borderLight,
-    paddingVertical: 12,
     gap: 4,
   },
   timeText: { fontSize: 12, fontWeight: '600', color: Colors.textMuted },
-  ordersCell: { flex: 1, padding: 10, minHeight: 60 },
-  emptySlotArea: {
+  ordersColumn: {
     flex: 1,
+    position: 'relative',
+    backgroundColor: Colors.card,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  gridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: Colors.borderLight,
+  },
+  emptySlotArea: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     justifyContent: 'center',
+    paddingHorizontal: 10,
   },
   emptySlot: { fontSize: 13, color: Colors.textMuted },
-  continuingBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 6,
-  },
-  continuingLine: {
-    width: 3,
-    height: 16,
-    borderRadius: 2,
-  },
-  continuingLabel: { fontSize: 13, fontWeight: '500' },
   orderCard: {
+    position: 'absolute',
+    left: 4,
+    right: 4,
     borderRadius: 8,
     borderWidth: 1,
-    padding: 10,
-    marginBottom: 6,
+    padding: 8,
+    overflow: 'hidden',
   },
-  orderHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  orderHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   orderClient: { fontSize: 14, fontWeight: '600' },
-  orderVehicle: { fontSize: 12, opacity: 0.85, marginBottom: 4 },
-  orderStaffRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  orderVehicle: { fontSize: 12, opacity: 0.85, marginBottom: 2 },
+  orderStaffRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
   orderStaff: { fontSize: 11, opacity: 0.7 },
   orderFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 'auto',
   },
   orderCost: { fontSize: 13, fontWeight: '700' },
   orderDuration: { fontSize: 12, opacity: 0.8 },
   statusBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,

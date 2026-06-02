@@ -152,6 +152,13 @@ export function WorkOrderFormScreen() {
   const selectedVehicle = vehiclesData?.find((v: any) => v.id === vehicleId)
   const selectedService = servicesData?.find((s: any) => s.id === serviceId)
 
+  // Auto-select vehicle if client has only one
+  useEffect(() => {
+    if (filteredVehicles.length === 1 && !vehicleId) {
+      setVehicleId(filteredVehicles[0].id)
+    }
+  }, [filteredVehicles, vehicleId])
+
   const totalCost = selectedService?.price || 0
 
   const handleSave = () => {

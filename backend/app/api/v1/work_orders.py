@@ -69,6 +69,28 @@ def get_work_orders(db: Session = Depends(get_db)):
         ))
     return result
 
+@router.get("/{order_id}", response_model=WorkOrderResponse)
+def get_work_order(order_id: str, db: Session = Depends(get_db)):
+    order = db.query(WorkOrder).filter(WorkOrder.id == order_id, WorkOrder.is_deleted == False).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    client = db.query(Client).filter(Client.id == order.client_id).first()
+    vehicle = db.query(Vehicle).filter(Vehicle.id == order.vehicle_id).first()
+    service = db.query(Service).filter(Service.id == order.service_id).first()
+    return WorkOrderResponse(
+        id=order.id,
+        client={"id": client.id, "name": client.name, "phone": client.phone} if client else {},
+        vehicle={"id": vehicle.id, "make": vehicle.make, "model": vehicle.model, "license_plate": vehicle.license_plate} if vehicle else {},
+        service={"id": service.id, "name": service.name, "price": float(service.price) if service.price else 0, "duration": service.duration if service else 1} if service else {},
+        staff_id=order.staff_id,
+        status=order.status,
+        total_cost=float(order.total_cost or 0),
+        description=order.description,
+        source=order.source,
+        scheduled_date=order.scheduled_date.replace(tzinfo=timezone.utc).isoformat() if order.scheduled_date else None,
+        created_at=order.created_at.replace(tzinfo=timezone.utc).isoformat(),
+    )
+
 @router.post("/", response_model=WorkOrderResponse)
 def create_work_order(data: WorkOrderCreate, db: Session = Depends(get_db)):
     service = db.query(Service).filter(Service.id == data.service_id).first()

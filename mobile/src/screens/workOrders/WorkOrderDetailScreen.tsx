@@ -56,6 +56,10 @@ export function WorkOrderDetailScreen() {
     )
   }
 
+  const clientName = order.client?.name || 'Клиент'
+  const vehicleInfo = order.vehicle ? `${order.vehicle.make} ${order.vehicle.model}` : 'Автомобиль'
+  const totalCost = order.total_cost || order.service?.price || 0
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.card}>
@@ -64,8 +68,8 @@ export function WorkOrderDetailScreen() {
             {STATUS_LABELS[order.status]}
           </Text>
         </View>
-        <Text style={styles.clientName}>{order.client_name}</Text>
-        <Text style={styles.vehicle}>{order.vehicle_info}</Text>
+        <Text style={styles.clientName}>{clientName}</Text>
+        <Text style={styles.vehicle}>{vehicleInfo}</Text>
         <Text style={styles.date}>Создан: {formatDate(order.created_at)}</Text>
       </View>
 
@@ -76,7 +80,7 @@ export function WorkOrderDetailScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Стоимость</Text>
-        <Text style={styles.price}>{formatCurrency(order.total || 0)}</Text>
+        <Text style={styles.price}>{formatCurrency(totalCost)}</Text>
       </View>
 
       {order.status !== 'completed' && order.status !== 'cancelled' ? (

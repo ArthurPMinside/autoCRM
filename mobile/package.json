@@ -39,6 +39,8 @@
   },
   "scripts": {
     "start": "expo start",
+    "start:android-emulator": "API_URL=http://10.0.2.2:8001/api/v1 expo start",
+    "start:android-device": "API_URL=http://$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}'):8001/api/v1 expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web"
