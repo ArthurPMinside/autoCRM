@@ -40,6 +40,7 @@ def get_bodies(generation_id: int, db: Session = Depends(get_db)):
     ).order_by(CarCatalogBody.body_type).all()
     return [{
         "id": b.id,
+        "name": b.body_type,
         "body_type": b.body_type,
         "frames": b.frames,
     } for b in bodies]

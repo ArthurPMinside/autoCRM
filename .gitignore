@@ -26,3 +26,17 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Mobile native builds
+*.apk
+*.aab
+*.idsig
+android/
+ios/
+.kotlin/
+.expo/
+
+# Data/scrape artifacts
+drom_catalog_full.csv
+scrape_progress.json
+vehicle_catalog.json

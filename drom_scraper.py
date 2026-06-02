@@ -8,27 +8,40 @@ Features:
   - Rotating User-Agents
   - Exponential backoff on HTTP 429 / 5xx
   - Low concurrency (2 workers max)
-  - Resumable: skips already-scraped brands if DB exists
+  - Resumable: skips already-scraped brands/models via progress.json
+  - Progress auto-saved after every brand & every model
+  - Can resume after Ctrl+C, crash, or IP ban
 
 Usage:
-    cd backend && python scripts/scrape_drom_catalog.py
+    cd backend && python scripts/scrape_drom_catalog.py          # resume by default
+    cd backend && python scripts/scrape_drom_catalog.py --reset  # start from scratch
+    cd backend && python scripts/scrape_drom_catalog.py --brand toyota bmw  # only these brands
 
 Requirements:
     pip install requests
 """
 
+import argparse
 import json
 import os
 import random
 import re
 import sqlite3
+import sys
+import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
 
-DB_PATH = Path(__file__).parent.parent / "autocrm.db"
+# ──────────────────────────────────────────────────────────────────────────────
+# Config
+# ──────────────────────────────────────────────────────────────────────────────
+
+DB_PATH = Path(__file__).parent / "backend" / "autocrm.db"
+PROGRESS_PATH = Path(__file__).parent / "backend" / "scrape_progress.json"
 BASE_URL = "https://www.drom.ru"
 
 # Rotating User-Agents to reduce fingerprinting
@@ -46,8 +59,7 @@ PROXY = os.getenv("HTTP_PROXY") or os.getenv("HTTPS_PROXY")
 HEADERS_BASE = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br",
-    "DNT": "1",
+#    "DNT": "1",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
     "Sec-Fetch-Dest": "document",
@@ -97,6 +109,88 @@ KNOWN_NAMES = {
     "radar": "Radar", "tank": "Tank", "wey": "Wey", "byd": "BYD", "tata": "Tata",
     "iveco": "Iveco",
 }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Progress tracker — resumable scraping
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ProgressTracker:
+    """
+    Tracks which brands and models have been successfully scraped.
+    Auto-saves to JSON after every completed brand/model.
+    """
+
+    def __init__(self, path: Path):
+        self.path = path.resolve()
+        self._data = self._load()
+        self._lock = threading.Lock()
+
+    def _load(self) -> dict:
+        if self.path.exists():
+            try:
+                with open(self.path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {
+            "completed_brands": {},      # {slug: true}
+            "completed_models": {},      # {"brand_slug/model_slug": true}
+            "failed_models": {},         # {"brand_slug/model_slug": error_msg}
+            "stats": {
+                "brands_total": 0,
+                "brands_done": 0,
+                "models_total": 0,
+                "models_done": 0,
+            },
+        }
+
+    def save(self):
+        """Flush progress to disk immediately (thread-safe)."""
+        with self._lock:
+            tmp = self.path.with_suffix(".tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self._data.copy(), f, ensure_ascii=False, indent=2)
+            os.replace(str(tmp), str(self.path))
+
+    def is_brand_done(self, slug: str) -> bool:
+        return self._data["completed_brands"].get(slug, False)
+
+    def is_model_done(self, brand_slug: str, model_slug: str) -> bool:
+        return self._data["completed_models"].get(f"{brand_slug}/{model_slug}", False)
+
+    def mark_brand_done(self, slug: str):
+        self._data["completed_brands"][slug] = True
+        self._data["stats"]["brands_done"] = len(self._data["completed_brands"])
+        self.save()
+
+    def mark_model_done(self, brand_slug: str, model_slug: str):
+        self._data["completed_models"][f"{brand_slug}/{model_slug}"] = True
+        self._data["stats"]["models_done"] = len(self._data["completed_models"])
+        self.save()
+
+    def mark_model_failed(self, brand_slug: str, model_slug: str, error: str):
+        self._data["failed_models"][f"{brand_slug}/{model_slug}"] = str(error)
+        self.save()
+
+    def set_totals(self, brands: int, models: int):
+        self._data["stats"]["brands_total"] = brands
+        self._data["stats"]["models_total"] = models
+        self.save()
+
+    def summary(self) -> dict:
+        return self._data["stats"].copy()
+
+    def reset(self):
+        self._data = {
+            "completed_brands": {},
+            "completed_models": {},
+            "failed_models": {},
+            "stats": {"brands_total": 0, "brands_done": 0, "models_total": 0, "models_done": 0},
+        }
+        self.save()
+        if self.path.exists():
+            self.path.unlink()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -302,43 +396,59 @@ def init_db():
     conn.close()
 
 
-def save_to_db(brands: list, brand_models: dict, model_gens: dict):
+def _get_or_create_make(c, slug: str, name: str) -> int:
+    c.execute("SELECT id FROM car_catalog_makes WHERE slug = ?", (slug,))
+    row = c.fetchone()
+    if row:
+        return row[0]
+    c.execute("INSERT INTO car_catalog_makes (slug, name) VALUES (?, ?)", (slug, name))
+    return c.lastrowid
+
+
+def _get_or_create_model(c, make_id: int, slug: str, name: str) -> int:
+    c.execute("SELECT id FROM car_catalog_models WHERE make_id = ? AND slug = ?", (make_id, slug))
+    row = c.fetchone()
+    if row:
+        return row[0]
+    c.execute("INSERT INTO car_catalog_models (make_id, slug, name) VALUES (?, ?, ?)",
+              (make_id, slug, name))
+    return c.lastrowid
+
+
+def save_brand_to_db(brand: dict, models: list[dict], model_gens: dict):
+    """Incrementally save a single brand's data to the database."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    make_ids = {}
-    model_ids = {}
-    gen_ids = {}
+    make_id = _get_or_create_make(c, brand["slug"], brand["name"])
 
-    for brand in brands:
-        c.execute("INSERT INTO car_catalog_makes (slug, name) VALUES (?, ?)",
-                  (brand["slug"], brand["name"]))
-        make_ids[brand["slug"]] = c.lastrowid
-
-    for brand_slug, models in brand_models.items():
-        make_id = make_ids[brand_slug]
-        for model in models:
-            c.execute("INSERT INTO car_catalog_models (make_id, slug, name) VALUES (?, ?, ?)",
-                      (make_id, model["slug"], model["name"]))
-            model_ids[(brand_slug, model["slug"])] = c.lastrowid
-
-    for (brand_slug, model_slug), generations in model_gens.items():
-        model_id = model_ids[(brand_slug, model_slug)]
+    for model in models:
+        model_id = _get_or_create_model(c, make_id, model["slug"], model["name"])
+        key = (brand["slug"], model["slug"])
+        generations = model_gens.get(key, [])
         seen_gens = set()
+        gen_ids = {}
+
         for gen in generations:
-            key = (model_id, gen["generation_info"], gen["year_from"])
-            if key not in seen_gens:
-                seen_gens.add(key)
+            gen_key = (model_id, gen["generation_info"], gen["year_from"])
+            if gen_key not in seen_gens:
+                seen_gens.add(gen_key)
                 c.execute(
                     "INSERT INTO car_catalog_generations (model_id, name, year_from, year_to) VALUES (?, ?, ?, ?)",
                     (model_id, gen["generation_info"], gen["year_from"], gen["year_to"]))
-                gen_ids[key] = c.lastrowid
-            gen_id = gen_ids[key]
+                gen_ids[gen_key] = c.lastrowid
+            gen_id = gen_ids[gen_key]
             c.execute(
                 "INSERT INTO car_catalog_bodies (generation_id, body_type, frames, drom_id) VALUES (?, ?, ?, ?)",
                 (gen_id, gen["body_type"], gen["frames"], gen["drom_id"]))
 
     conn.commit()
     conn.close()
+
+
+def save_to_db(brands: list, brand_models: dict, model_gens: dict):
+    """Batch save (used at end of run for any remaining data)."""
+    for brand in brands:
+        save_brand_to_db(brand, brand_models.get(brand["slug"], []), model_gens)
 
 
 def db_stats() -> dict:
@@ -356,63 +466,132 @@ def db_stats() -> dict:
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
 
-def scrape_model(brand_slug: str, model: dict) -> tuple:
+def scrape_model(brand_slug: str, model: dict, progress: ProgressTracker) -> tuple:
+    key = (brand_slug, model["slug"])
+    if progress.is_model_done(brand_slug, model["slug"]):
+        return key, []  # skip already done
     gens = get_generations(brand_slug, model["slug"])
-    return (brand_slug, model["slug"]), gens
+    progress.mark_model_done(brand_slug, model["slug"])
+    return key, gens
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Scrape drom.ru car catalog")
+    parser.add_argument("--reset", action="store_true", help="Delete progress & DB and start from scratch")
+    parser.add_argument("--brand", nargs="+", default=None, help="Scrape only specific brand slugs (e.g. toyota bmw)")
+    parser.add_argument("--list-brands", action="store_true", help="Print available brand slugs and exit")
+    args = parser.parse_args()
+
+    progress = ProgressTracker(PROGRESS_PATH)
+
+    if args.reset:
+        print("[!] Reset mode: clearing progress and database...")
+        progress.reset()
+        if DB_PATH.exists():
+            DB_PATH.unlink()
+        print("[✓] Progress and DB cleared.\n")
+
     print("=" * 60)
-    print("drom.ru catalog scraper v2")
+    print("drom.ru catalog scraper v2 — resumable")
     print("=" * 60)
-    print(f"Database : {DB_PATH}")
-    print(f"Proxy    : {PROXY or 'none'}")
+    print(f"Database  : {DB_PATH}")
+    print(f"Progress  : {PROGRESS_PATH}")
+    print(f"Proxy     : {PROXY or 'none'}")
     print()
 
-    print("Initializing database...")
-    init_db()
+    if args.list_brands:
+        print("Fetching brand list...")
+        brands = get_brands()
+        priority = [b for b in brands if b["slug"] in PRIORITY_SLUGS]
+        print(f"\nAvailable brands ({len(brands)} total, {len(priority)} priority):")
+        for b in priority:
+            print(f"  {b['slug']:<20} → {b['name']}")
+        return
+
+    # Init DB if needed
+    if not DB_PATH.exists():
+        print("Initializing database...")
+        init_db()
 
     print("Fetching brands list...")
     all_brands = get_brands()
     print(f"Found {len(all_brands)} brands total")
 
-    # Filter to priority brands
-    priority_brands = [b for b in all_brands if b["slug"] in PRIORITY_SLUGS]
-    print(f"Will scrape {len(priority_brands)} priority brands\n")
+    # Filter to priority or CLI-specified brands
+    if args.brand:
+        target_slugs = set(args.brand)
+        priority_brands = [b for b in all_brands if b["slug"] in target_slugs]
+        print(f"Will scrape {len(priority_brands)} specified brands")
+    else:
+        priority_brands = [b for b in all_brands if b["slug"] in PRIORITY_SLUGS]
+        print(f"Will scrape {len(priority_brands)} priority brands")
+
+    # Skip already completed brands unless --reset
+    brands_to_scrape = [b for b in priority_brands if not progress.is_brand_done(b["slug"])]
+    skipped = len(priority_brands) - len(brands_to_scrape)
+    if skipped:
+        print(f"  ({skipped} already completed — skipping)")
+    print()
 
     brand_models = {}
     model_gens = {}
 
-    for i, brand in enumerate(priority_brands, 1):
-        print(f"[{i}/{len(priority_brands)}] {brand['name']} ({brand['slug']})...")
-        models = get_models(brand["slug"])
-        if not models:
-            print("  No models found, skipping.")
-            continue
-        print(f"  Found {len(models)} models, fetching generations with 2 workers + delays...")
-        brand_models[brand["slug"]] = models
+    # Set totals for progress tracking
+    progress.set_totals(len(brands_to_scrape), 0)
 
-        # Low-concurrency fetching with polite delays built into fetch()
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = {
-                executor.submit(scrape_model, brand["slug"], model): model
-                for model in models
-            }
-            for future in as_completed(futures):
-                model = futures[future]
-                try:
-                    key, gens = future.result()
-                    model_gens[key] = gens
-                    if gens:
-                        print(f"    ✓ {model['name']}: {len(gens)} generation records")
-                    else:
-                        print(f"    – {model['name']}: no generations")
-                except Exception as e:
-                    print(f"    ✗ {model['name']}: {e}")
+    try:
+        for i, brand in enumerate(brands_to_scrape, 1):
+            print(f"[{i}/{len(brands_to_scrape)}] {brand['name']} ({brand['slug']})...")
+            models = get_models(brand["slug"])
+            if not models:
+                print("  No models found, skipping.")
+                progress.mark_brand_done(brand["slug"])
+                continue
+            print(f"  Found {len(models)} models, fetching generations with 2 workers + delays...")
+            brand_models[brand["slug"]] = models
 
-    print("\n" + "=" * 60)
+            # Low-concurrency fetching with polite delays built into fetch()
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = {
+                    executor.submit(scrape_model, brand["slug"], model, progress): model
+                    for model in models
+                    if not progress.is_model_done(brand["slug"], model["slug"])
+                }
+                skipped_models = len(models) - len(futures)
+                if skipped_models:
+                    print(f"    ({skipped_models} models already done)")
+
+                for future in as_completed(futures):
+                    model = futures[future]
+                    try:
+                        key, gens = future.result()
+                        model_gens[key] = gens
+                        if gens:
+                            print(f"    ✓ {model['name']}: {len(gens)} generation records")
+                        else:
+                            print(f"    – {model['name']}: no generations")
+                    except Exception as e:
+                        print(f"    ✗ {model['name']}: {e}")
+                        progress.mark_model_failed(brand["slug"], model["slug"], str(e))
+
+            progress.mark_brand_done(brand["slug"])
+            save_brand_to_db(brand, models, model_gens)
+            stats = progress.summary()
+            print(f"  Progress: {stats['brands_done']}/{stats['brands_total']} brands, "
+                  f"{stats['models_done']} models done\n")
+
+    except KeyboardInterrupt:
+        print("\n[!] Interrupted by user. Progress saved — restart without --reset to resume.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n[!] Unexpected error: {e}")
+        traceback.print_exc()
+        print("[!] Progress saved — restart without --reset to resume.")
+        sys.exit(1)
+
+    print("=" * 60)
     print("Saving to database...")
-    save_to_db(priority_brands, brand_models, model_gens)
+    save_to_db(brands_to_scrape, brand_models, model_gens)
 
     stats = db_stats()
     print("\nDone!")
@@ -421,6 +600,15 @@ def main():
     print(f"  Generations : {stats['car_catalog_generations']}")
     print(f"  Bodies      : {stats['car_catalog_bodies']}")
     print(f"\nDatabase saved to: {DB_PATH}")
+    print(f"Progress file    : {PROGRESS_PATH}")
+
+    failed = progress._data.get("failed_models", {})
+    if failed:
+        print(f"\n[!] {len(failed)} models failed. Run again to retry:")
+        for key, err in list(failed.items())[:10]:
+            print(f"    {key}: {err}")
+        if len(failed) > 10:
+            print(f"    ... and {len(failed) - 10} more")
 
 
 if __name__ == "__main__":
