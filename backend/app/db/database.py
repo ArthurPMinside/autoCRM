@@ -7,6 +7,7 @@ from app.models.base import Base
 
 # Import all models to ensure they are registered with Base metadata
 from app.models import vehicle_catalog  # noqa: F401
+from app.models import settings  # noqa: F401
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./autocrm.db")
 

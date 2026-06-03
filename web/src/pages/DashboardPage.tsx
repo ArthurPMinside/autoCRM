@@ -31,6 +31,30 @@ function getDefaultDates() {
   return { start: fmt(start), end: fmt(end) }
 }
 
+function shiftMonthBack(dateStr: string): string {
+  const d = new Date(dateStr)
+  d.setMonth(d.getMonth() - 1)
+  return d.toISOString().split('T')[0]
+}
+
+function isDateInRange(dateStr: string | null | undefined, start: string, end: string): boolean {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  const s = new Date(start)
+  const e = new Date(end)
+  e.setHours(23, 59, 59, 999)
+  return d >= s && d <= e
+}
+
+function calcChange(current: number, previous: number): { value: string; isPositive: boolean | null } {
+  if (previous === 0) {
+    if (current === 0) return { value: '0%', isPositive: null }
+    return { value: 'Новое', isPositive: true }
+  }
+  const change = ((current - previous) / previous) * 100
+  return { value: `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`, isPositive: change >= 0 }
+}
+
 type SortBy = 'revenue' | 'orders' | 'clients' | 'source'
 type SortOrder = 'asc' | 'desc'
 
@@ -128,9 +152,27 @@ export default function DashboardPage() {
     )
   }
 
-  const totalRevenue = transactions?.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0) || 0
-  const totalExpenses = transactions?.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0) || 0
-  const activeOrders = orders?.filter((o: any) => o.status === 'in_progress').length || 0
+  const prevStart = shiftMonthBack(startDate)
+  const prevEnd = shiftMonthBack(endDate)
+
+  // --- Current period metrics ---
+  const currentOrders = orders?.filter((o: any) => isDateInRange(o.scheduled_date, startDate, endDate)) || []
+  const periodRevenue = currentOrders.filter((o: any) => o.status !== 'cancelled').reduce((s: number, o: any) => s + (o.total_cost || 0), 0)
+  const periodActiveOrders = currentOrders.filter((o: any) => o.status === 'pending' || o.status === 'in_progress').length
+  const periodNewClients = clients?.filter((c: any) => isDateInRange(c.created_at, startDate, endDate)).length || 0
+  const periodExpenses = transactions?.filter((t: any) => t.type === 'expense' && isDateInRange(t.date, startDate, endDate)).reduce((s: number, t: any) => s + t.amount, 0) || 0
+
+  // --- Previous period metrics ---
+  const prevOrders = orders?.filter((o: any) => isDateInRange(o.scheduled_date, prevStart, prevEnd)) || []
+  const prevRevenue = prevOrders.filter((o: any) => o.status !== 'cancelled').reduce((s: number, o: any) => s + (o.total_cost || 0), 0)
+  const prevActiveOrders = prevOrders.filter((o: any) => o.status === 'pending' || o.status === 'in_progress').length
+  const prevNewClients = clients?.filter((c: any) => isDateInRange(c.created_at, prevStart, prevEnd)).length || 0
+  const prevExpenses = transactions?.filter((t: any) => t.type === 'expense' && isDateInRange(t.date, prevStart, prevEnd)).reduce((s: number, t: any) => s + t.amount, 0) || 0
+
+  const revenueChange = calcChange(periodRevenue, prevRevenue)
+  const expensesChange = calcChange(periodExpenses, prevExpenses)
+  const activeOrdersChange = calcChange(periodActiveOrders, prevActiveOrders)
+  const clientsChange = calcChange(periodNewClients, prevNewClients)
 
   const statusCounts: Record<string, number> = {}
   orders?.forEach((o: any) => {
@@ -143,12 +185,20 @@ export default function DashboardPage() {
   }))
 
   const dailyMap: Record<string, { revenue: number; expenses: number }> = {}
+  // Revenue from orders by scheduled date
+  orders?.forEach((o: any) => {
+    if (o.status === 'cancelled') return
+    const d = new Date(o.scheduled_date || o.created_at)
+    const key = d.toLocaleDateString('ru-RU', { weekday: 'short' })
+    if (!dailyMap[key]) dailyMap[key] = { revenue: 0, expenses: 0 }
+    dailyMap[key].revenue += o.total_cost || 0
+  })
+  // Expenses from transactions
   transactions?.forEach((t: any) => {
     const d = new Date(t.date)
     const key = d.toLocaleDateString('ru-RU', { weekday: 'short' })
     if (!dailyMap[key]) dailyMap[key] = { revenue: 0, expenses: 0 }
-    if (t.type === 'income') dailyMap[key].revenue += t.amount
-    else dailyMap[key].expenses += t.amount
+    if (t.type === 'expense') dailyMap[key].expenses += t.amount
   })
   const dailyRevenueData = Object.entries(dailyMap).map(([day, vals]) => ({ day, ...vals }))
 
@@ -210,27 +260,28 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Main Tabs: Overview / Analytics link */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 items-center justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'overview'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Обзор
-          </button>
-        </div>
-        <a
-          href="/analytics"
-          className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1"
+      {/* Main Tabs: Overview / Analytics */}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 items-center">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'overview'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
         >
-          Подробная аналитика
-          <ArrowUpRight className="w-3.5 h-3.5" />
-        </a>
+          Обзор
+        </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'analytics'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          Аналитика
+        </button>
       </div>
 
       {/* OVERVIEW TAB */}
@@ -241,36 +292,42 @@ export default function DashboardPage() {
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-gray-500 dark:text-gray-400">Выручка</span>
-                <div className="flex items-center gap-1 text-emerald-600 text-xs">
-                  <ArrowUpRight className="w-3 h-3" />
-                  12%
+                <div className={`flex items-center gap-1 text-xs ${revenueChange.isPositive === true ? 'text-emerald-600' : revenueChange.isPositive === false ? 'text-red-600' : 'text-gray-500'}`}>
+                  {revenueChange.isPositive === true ? <ArrowUpRight className="w-3 h-3" /> : revenueChange.isPositive === false ? <ArrowDownRight className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                  {revenueChange.value}
                 </div>
               </div>
-              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalRevenue.toLocaleString()} ₽</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{periodRevenue.toLocaleString()} ₽</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-gray-500 dark:text-gray-400">Расходы</span>
-                <div className="flex items-center gap-1 text-red-600 text-xs">
-                  <ArrowDownRight className="w-3 h-3" />
-                  5%
+                <div className={`flex items-center gap-1 text-xs ${expensesChange.isPositive === true ? 'text-emerald-600' : expensesChange.isPositive === false ? 'text-red-600' : 'text-gray-500'}`}>
+                  {expensesChange.isPositive === true ? <ArrowUpRight className="w-3 h-3" /> : expensesChange.isPositive === false ? <ArrowDownRight className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                  {expensesChange.value}
                 </div>
               </div>
-              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalExpenses.toLocaleString()} ₽</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{periodExpenses.toLocaleString()} ₽</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-gray-500 dark:text-gray-400">В работе</span>
-                <Wrench className="w-4 h-4 text-blue-500" />
+                <div className={`flex items-center gap-1 text-xs ${activeOrdersChange.isPositive === true ? 'text-emerald-600' : activeOrdersChange.isPositive === false ? 'text-red-600' : 'text-gray-500'}`}>
+                  {activeOrdersChange.isPositive === true ? <ArrowUpRight className="w-3 h-3" /> : activeOrdersChange.isPositive === false ? <ArrowDownRight className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                  {activeOrdersChange.value}
+                </div>
               </div>
-              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{activeOrders}</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{periodActiveOrders}</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-gray-500 dark:text-gray-400">Клиентов</span>
-                <Users className="w-4 h-4 text-purple-500" />
+                <div className={`flex items-center gap-1 text-xs ${clientsChange.isPositive === true ? 'text-emerald-600' : clientsChange.isPositive === false ? 'text-red-600' : 'text-gray-500'}`}>
+                  {clientsChange.isPositive === true ? <ArrowUpRight className="w-3 h-3" /> : clientsChange.isPositive === false ? <ArrowDownRight className="w-3 h-3" /> : <span className="w-3 h-3" />}
+                  {clientsChange.value}
+                </div>
               </div>
-              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{clients?.length || 0}</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{periodNewClients}</div>
             </div>
           </div>
 

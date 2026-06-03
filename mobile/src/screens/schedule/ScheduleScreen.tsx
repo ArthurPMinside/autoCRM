@@ -13,15 +13,24 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigation } from '@react-navigation/native'
 import { workOrdersApi } from '../../api/workOrders'
 import { staffApi } from '../../api/staff'
+import { settingsApi } from '../../api/settings'
 import { Colors } from '../../constants/colors'
 import { formatCurrency } from '../../utils/format'
 import { ChevronLeft, ChevronRight, Plus, Clock, User } from 'lucide-react-native'
 
-const START_HOUR = 8
-const END_HOUR = 20
 const SLOT_MINUTES = 60
 const SLOT_HEIGHT = 60
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+
+const overlapColors = [
+  { bg: '#dbeafe', text: '#1e40af', border: '#bfdbfe' },
+  { bg: '#d1fae5', text: '#065f46', border: '#a7f3d0' },
+  { bg: '#f3e8ff', text: '#6b21a8', border: '#e9d5ff' },
+  { bg: '#ffe4e6', text: '#9f1239', border: '#fecdd3' },
+  { bg: '#fef3c7', text: '#92400e', border: '#fde68a' },
+  { bg: '#cffafe', text: '#155e75', border: '#a5f3fc' },
+]
+const getOverlapColor = (index: number) => overlapColors[index % overlapColors.length]
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
@@ -92,13 +101,24 @@ export function ScheduleScreen() {
 
   const weekStart = getWeekStart(currentDate)
 
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await settingsApi.get()
+      return res.data as any
+    },
+  })
+
+  const startHour = settings?.work_start_hour ?? 8
+  const endHour = settings?.work_end_hour ?? 20
+
   const timeSlots = useMemo(() => {
     const slots: string[] = []
-    for (let m = START_HOUR * 60; m < END_HOUR * 60; m += SLOT_MINUTES) {
+    for (let m = startHour * 60; m < endHour * 60; m += SLOT_MINUTES) {
       slots.push(minutesToTime(m))
     }
     return slots
-  }, [])
+  }, [startHour, endHour])
 
   const {
     data: orders,
@@ -230,7 +250,24 @@ export function ScheduleScreen() {
   }
 
   const dayOrders = ordersByDay[selectedDayIndex]
-  const scheduleHeight = (END_HOUR - START_HOUR) * SLOT_HEIGHT
+
+  const dayOrdersWithOverlap = useMemo(() => {
+    if (!dayOrders) return []
+    return dayOrders.map((order, i) => {
+      const overlapping = dayOrders.filter((o, j) => {
+        if (i === j) return false
+        return o.startMinutes < order.endMinutes && o.endMinutes > order.startMinutes
+      })
+      const group = [order, ...overlapping].sort((a, b) => a.startMinutes - b.startMinutes)
+      const overlapCount = group.length
+      const overlapIndex = group.findIndex(
+        (o) => o.id === order.id && o.startMinutes === order.startMinutes
+      )
+      return { ...order, overlapCount, overlapIndex }
+    })
+  }, [dayOrders])
+
+  const scheduleHeight = (endHour - startHour) * SLOT_HEIGHT
 
   if (ordersLoading && !orders) {
     return (
@@ -355,11 +392,6 @@ export function ScheduleScreen() {
 
           {/* Empty slot click areas */}
           {timeSlots.map((time, index) => {
-            const slotMinutes = timeToMinutes(time)
-            const hasOrder = dayOrders.some(
-              (o) => o.startMinutes <= slotMinutes && slotMinutes < o.endMinutes
-            )
-            if (hasOrder) return null
             return (
               <TouchableOpacity
                 key={`empty-${time}`}
@@ -376,22 +408,34 @@ export function ScheduleScreen() {
           })}
 
           {/* Order cards */}
-          {dayOrders.map((order) => {
-            const colors = getStatusColor(order.status)
-            const top = ((order.startMinutes - START_HOUR * 60) / 60) * SLOT_HEIGHT
+          {dayOrdersWithOverlap.map((order) => {
+            const isOverlapping = (order.overlapCount || 1) > 1
+            const colors = isOverlapping
+              ? getOverlapColor(order.overlapIndex || 0)
+              : getStatusColor(order.status)
+            const top = ((order.startMinutes - startHour * 60) / 60) * SLOT_HEIGHT
             const height = order.durationHours * SLOT_HEIGHT
+            const overlapCount = order.overlapCount || 1
+            const overlapIndex = order.overlapIndex || 0
+            const leftPct = (overlapIndex / overlapCount) * 100 + 0.5
+            const widthPct = (100 / overlapCount) - 1
+            const cardStyle: any = {
+              top,
+              height: height - 4,
+              backgroundColor: colors.bg,
+              borderColor: colors.border,
+            }
+            if (overlapCount > 1) {
+              cardStyle.left = `${leftPct}%`
+              cardStyle.width = `${widthPct}%`
+            } else {
+              cardStyle.left = 4
+              cardStyle.right = 4
+            }
             return (
               <TouchableOpacity
                 key={order.id}
-                style={[
-                  styles.orderCard,
-                  {
-                    top,
-                    height: height - 4,
-                    backgroundColor: colors.bg,
-                    borderColor: colors.border,
-                  },
-                ]}
+                style={[styles.orderCard, cardStyle]}
                 onPress={() => handleOrderPress(order)}
                 activeOpacity={0.9}
               >
@@ -579,8 +623,6 @@ const styles = StyleSheet.create({
   emptySlot: { fontSize: 13, color: Colors.textMuted },
   orderCard: {
     position: 'absolute',
-    left: 4,
-    right: 4,
     borderRadius: 8,
     borderWidth: 1,
     padding: 8,

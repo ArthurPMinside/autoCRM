@@ -13,7 +13,7 @@ import { useRoute, useNavigation } from '@react-navigation/native'
 import { clientsApi } from '../../api/clients'
 import { workOrdersApi } from '../../api/workOrders'
 import { Colors } from '../../constants/colors'
-import { formatPhone, formatDate, formatCurrency } from '../../utils/format'
+import { formatPhone, formatDate, formatDateTime, formatCurrency } from '../../utils/format'
 import {
   Phone,
   Mail,
@@ -207,6 +207,14 @@ export function ClientDetailScreen() {
                 </Text>
                 <Text style={styles.historyCost}>{formatCurrency(order.total_cost || 0)}</Text>
               </View>
+              <Text style={styles.historyCreated}>
+                Дата и время записи: {formatDateTime(order.created_at)}
+              </Text>
+              {order.scheduled_date && (
+                <Text style={styles.historyPlanned}>
+                  Плановая дата готовности: {formatDateTime(order.scheduled_date)}
+                </Text>
+              )}
               {order.staff_id && (
                 <Text style={styles.historyStaff}>Мастер: {order.staff_id}</Text>
               )}
@@ -307,6 +315,8 @@ const styles = StyleSheet.create({
   },
   historyMeta: { fontSize: 13, color: Colors.textMuted },
   historyCost: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  historyCreated: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  historyPlanned: { fontSize: 12, color: Colors.primary, marginTop: 2 },
   historyStaff: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   historySource: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
   historyArrow: { position: 'absolute', right: 12, top: '50%', marginTop: -8 },

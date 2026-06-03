@@ -226,7 +226,7 @@ export default function WorkOrdersPage() {
                     <span className="ml-2 text-gray-900 dark:text-gray-100">{order.client?.phone || '-'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">Дата записи:</span>
+                    <span className="text-gray-500 dark:text-gray-400">Плановая дата готовности:</span>
                     <span className="ml-2 text-gray-900 dark:text-gray-100">
                       {order.scheduled_date ? new Date(order.scheduled_date).toLocaleDateString('ru-RU') : '-'}
                     </span>

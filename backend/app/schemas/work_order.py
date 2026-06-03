@@ -3,7 +3,6 @@ from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel
-from app.models.work_order import WorkOrderStatus
 
 
 class WorkOrderItemCreate(BaseModel):
@@ -30,7 +29,7 @@ class WorkOrderCreate(BaseModel):
 
 
 class WorkOrderUpdate(BaseModel):
-    status: Optional[WorkOrderStatus] = None
+    status: Optional[str] = None
     mechanic_id: Optional[UUID] = None
     description: Optional[str] = None
 
@@ -41,7 +40,7 @@ class WorkOrderOut(BaseModel):
     client_id: UUID
     vehicle_id: UUID
     mechanic_id: Optional[UUID]
-    status: WorkOrderStatus
+    status: str
     description: Optional[str] = None
     total_amount: Decimal
     created_at: datetime

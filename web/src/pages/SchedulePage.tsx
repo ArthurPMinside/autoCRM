@@ -3,14 +3,31 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, Clock, Loader2, User } from 'lucide-react'
 import { workOrdersApi } from '../api/workOrders'
 import { staffApi } from '../api/staff'
+import { settingsApi } from '../api/settings'
 import CreateWorkOrderModal from '../components/CreateWorkOrderModal'
 import EditWorkOrderModal from '../components/EditWorkOrderModal'
 
-const START_HOUR = 8
-const END_HOUR = 20
 const SLOT_MINUTES = 60
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+
+const overlapColors = [
+  { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', darkBg: 'dark:bg-blue-900/30', darkText: 'dark:text-blue-300', dot: 'bg-blue-500' },
+  { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200', darkBg: 'dark:bg-emerald-900/30', darkText: 'dark:text-emerald-300', dot: 'bg-emerald-500' },
+  { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200', darkBg: 'dark:bg-purple-900/30', darkText: 'dark:text-purple-300', dot: 'bg-purple-500' },
+  { bg: 'bg-rose-100', text: 'text-rose-800', border: 'border-rose-200', darkBg: 'dark:bg-rose-900/30', darkText: 'dark:text-rose-300', dot: 'bg-rose-500' },
+  { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200', darkBg: 'dark:bg-amber-900/30', darkText: 'dark:text-amber-300', dot: 'bg-amber-500' },
+  { bg: 'bg-cyan-100', text: 'text-cyan-800', border: 'border-cyan-200', darkBg: 'dark:bg-cyan-900/30', darkText: 'dark:text-cyan-300', dot: 'bg-cyan-500' },
+]
+
+function getOverlapColor(index: number) {
+  const c = overlapColors[index % overlapColors.length]
+  return `${c.bg} ${c.text} ${c.border} ${c.darkBg} ${c.darkText}`
+}
+
+function getOverlapDot(index: number) {
+  return overlapColors[index % overlapColors.length].dot
+}
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
@@ -62,6 +79,8 @@ interface ScheduledOrder {
   startMinutes: number
   endMinutes: number
   durationHours: number
+  originalOrder?: any
+  dayOffset?: number
 }
 
 export default function SchedulePage() {
@@ -72,13 +91,24 @@ export default function SchedulePage() {
 
   const weekStart = getWeekStart(currentDate)
 
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await settingsApi.get()
+      return res.data
+    },
+  })
+
+  const START_HOUR = settings?.work_start_hour ?? 8
+  const END_HOUR = settings?.work_end_hour ?? 20
+
   const timeSlots = useMemo(() => {
     const slots = []
     for (let m = START_HOUR * 60; m < END_HOUR * 60; m += SLOT_MINUTES) {
       slots.push(minutesToTime(m))
     }
     return slots
-  }, [])
+  }, [START_HOUR, END_HOUR])
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['workOrders'],
@@ -102,8 +132,7 @@ export default function SchedulePage() {
     return s?.name?.split(' ')[0] || null
   }
 
-  // Group orders by day and compute their time ranges
-  // Filter out cancelled orders from schedule view
+  // Group orders by day with multi-day spillover support
   const ordersByDay = useMemo(() => {
     const result: ScheduledOrder[][] = Array.from({ length: 7 }, () => [])
     if (!orders) return result
@@ -111,24 +140,69 @@ export default function SchedulePage() {
     for (const order of orders) {
       if (!order.scheduled_date) continue
       if (order.status === 'cancelled') continue
-      const orderDate = new Date(order.scheduled_date)
-      const dayIndex = orderDate.getDay() === 0 ? 6 : orderDate.getDay() - 1
-      const slotDate = addDays(weekStart, dayIndex)
-      if (!isSameDay(orderDate, slotDate)) continue
 
+      const orderDate = new Date(order.scheduled_date)
       const startMinutes = orderDate.getHours() * 60 + orderDate.getMinutes()
       const durationHours = order.service?.duration || 1
-      const endMinutes = startMinutes + durationHours * 60
+      const totalDurationMinutes = durationHours * 60
 
-      result[dayIndex].push({
-        ...order,
-        startMinutes,
-        endMinutes,
-        durationHours,
-      })
+      // Check if this order falls within the current week view
+      const orderWeekStart = getWeekStart(orderDate)
+      if (!isSameDay(orderWeekStart, weekStart)) {
+        // Order is not in current week — skip (we only show one week at a time)
+        // But we still need to check if a multi-day order spills INTO this week
+        const orderEndDate = new Date(orderDate.getTime() + totalDurationMinutes * 60000)
+        const orderEndWeekStart = getWeekStart(orderEndDate)
+        if (!isSameDay(orderEndWeekStart, weekStart) && orderDate < weekStart && orderEndDate > weekStart) {
+          // Multi-day order started in previous week and spills into this week
+          // We'll handle this below by iterating through days
+        } else {
+          continue
+        }
+      }
+
+      // Split order into day segments respecting working hours
+      let remainingMinutes = totalDurationMinutes
+      let currentDay = new Date(orderDate)
+      let currentStartMinutes = startMinutes
+
+      while (remainingMinutes > 0) {
+        const dayIndex = currentDay.getDay() === 0 ? 6 : currentDay.getDay() - 1
+        const slotDate = addDays(weekStart, dayIndex)
+
+        if (!isSameDay(currentDay, slotDate)) {
+          // If currentDay doesn't match slotDate, move to next day
+          currentDay.setDate(currentDay.getDate() + 1)
+          currentStartMinutes = START_HOUR * 60
+          continue
+        }
+
+        const dayStartMin = START_HOUR * 60
+        const dayEndMin = END_HOUR * 60
+        const segmentStart = Math.max(currentStartMinutes, dayStartMin)
+        const available = dayEndMin - segmentStart
+
+        if (available > 0) {
+          const segmentMinutes = Math.min(remainingMinutes, available)
+          const segmentEnd = segmentStart + segmentMinutes
+
+          result[dayIndex].push({
+            ...order,
+            startMinutes: segmentStart,
+            endMinutes: segmentEnd,
+            durationHours: segmentMinutes / 60,
+            originalOrder: order,
+          })
+          remainingMinutes -= segmentMinutes
+        }
+
+        // Move to next business day
+        currentDay.setDate(currentDay.getDate() + 1)
+        currentStartMinutes = START_HOUR * 60
+      }
     }
     return result
-  }, [orders, weekStart])
+  }, [orders, weekStart, START_HOUR, END_HOUR])
 
   // Check if an order occupies a given time slot
   const getOrdersForSlot = (dayIndex: number, slotTime: string): ScheduledOrder[] => {
@@ -285,43 +359,49 @@ export default function SchedulePage() {
                     className={`p-1 border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative ${slotOrders.length === 0 ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : ''}`}
                     style={{ minHeight: '60px' }}
                   >
-                    {startingOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        onClick={(e) => { e.stopPropagation(); setEditingOrder(order) }}
-                        className={`rounded-lg border text-xs cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(order.status)}`}
-                        style={{
-                          position: 'absolute',
-                          top: '4px',
-                          left: '4px',
-                          right: '4px',
-                          zIndex: 10,
-                          height: `${Math.min(order.durationHours, END_HOUR - Math.floor(order.startMinutes / 60)) * 60 - 8}px`,
-                        }}
-                      >
-                        <div className="p-2 h-full flex flex-col">
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <div className={`w-1.5 h-1.5 rounded-full ${getStatusDot(order.status)}`} />
-                            <span className="font-medium truncate">{order.client?.name?.split(' ')[0] || 'Клиент'}</span>
-                          </div>
-                          <div className="truncate text-[10px] opacity-80">
-                            {order.vehicle?.make} {order.vehicle?.model}
-                          </div>
-                          {getStaffName(order.staff_id) && (
-                            <div className="flex items-center gap-0.5 text-[9px] opacity-60 mt-0.5">
-                              <User className="w-2 h-2" />
-                              {getStaffName(order.staff_id)}
+                    {startingOrders.map((order, orderIndex) => {
+                      const overlapCount = startingOrders.length
+                      const isOverlapping = overlapCount > 1
+                      const colorClass = isOverlapping ? getOverlapColor(orderIndex) : getStatusColor(order.status)
+                      const dotClass = isOverlapping ? getOverlapDot(orderIndex) : getStatusDot(order.status)
+                      return (
+                        <div
+                          key={order.id + '-' + order.startMinutes}
+                          onClick={(e) => { e.stopPropagation(); setEditingOrder(order.originalOrder || order) }}
+                          className={`rounded-lg border text-xs cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${colorClass}`}
+                          style={{
+                            position: 'absolute',
+                            top: '4px',
+                            left: `calc(${(orderIndex / overlapCount) * 100}% + 4px)`,
+                            width: `calc(${(1 / overlapCount) * 100}% - 8px)`,
+                            zIndex: 10,
+                            height: `${Math.min(order.durationHours, END_HOUR - Math.floor(order.startMinutes / 60)) * 60 - 8}px`,
+                          }}
+                        >
+                          <div className="p-1.5 h-full flex flex-col">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotClass}`} />
+                              <span className="font-medium truncate">{order.client?.name?.split(' ')[0] || 'Клиент'}</span>
                             </div>
-                          )}
-                          <div className="flex items-center justify-between mt-auto">
-                            <span className="text-[10px] font-medium">{order.total_cost?.toLocaleString()} ₽</span>
-                            <span className="text-[9px] px-1 py-0.5 rounded bg-white/50 dark:bg-black/20">
-                              {order.durationHours}ч
-                            </span>
+                            <div className="truncate text-[10px] opacity-80">
+                              {order.vehicle?.make} {order.vehicle?.model}
+                            </div>
+                            {getStaffName(order.staff_id) && (
+                              <div className="flex items-center gap-0.5 text-[9px] opacity-60 mt-0.5">
+                                <User className="w-2 h-2 flex-shrink-0" />
+                                <span className="truncate">{getStaffName(order.staff_id)}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between mt-auto">
+                              <span className="text-[10px] font-medium">{order.total_cost?.toLocaleString()} ₽</span>
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-white/50 dark:bg-black/20 flex-shrink-0">
+                                {order.durationHours}ч
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -365,29 +445,33 @@ export default function SchedulePage() {
                   <span className="ml-auto text-xs text-gray-400">+ Добавить</span>
                 )}
               </div>
-              {startingOrders.map((order) => (
-                <div key={order.id} onClick={(e) => { e.stopPropagation(); setEditingOrder(order) }} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <div className={`w-2 h-2 rounded-full ${getStatusDot(order.status)}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{order.client?.name || 'Клиент'}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {order.vehicle?.make} {order.vehicle?.model} • {order.service?.name}
-                    </div>
-                    {getStaffName(order.staff_id) && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {getStaffName(order.staff_id)}
+              {startingOrders.map((order, orderIndex) => {
+                const colorClass = startingOrders.length > 1 ? getOverlapColor(orderIndex) : getStatusColor(order.status)
+                const dotClass = startingOrders.length > 1 ? getOverlapDot(orderIndex) : getStatusDot(order.status)
+                return (
+                  <div key={order.id + '-' + order.startMinutes} onClick={(e) => { e.stopPropagation(); setEditingOrder(order.originalOrder || order) }} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{order.client?.name || 'Клиент'}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {order.vehicle?.make} {order.vehicle?.model} • {order.service?.name}
                       </div>
-                    )}
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {order.durationHours} ч • {order.total_cost?.toLocaleString()} ₽
+                      {getStaffName(order.staff_id) && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                          <User className="w-3 h-3 flex-shrink-0" />
+                          {getStaffName(order.staff_id)}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {order.durationHours} ч • {order.total_cost?.toLocaleString()} ₽
+                      </div>
                     </div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0 ${colorClass}`}>
+                      {getStatusLabel(order.status)}
+                    </span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
-                    {getStatusLabel(order.status)}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )
         })}

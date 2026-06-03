@@ -302,7 +302,7 @@ export default function EditWorkOrderModal({ order, onClose }: Props) {
 
           {/* Scheduled date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дата и время записи</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Плановая дата готовности</label>
             <input
               type="datetime-local"
               value={scheduledDate}

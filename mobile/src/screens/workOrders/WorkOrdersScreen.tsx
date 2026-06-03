@@ -38,26 +38,37 @@ export function WorkOrdersScreen() {
 
   const orders = (data || []).filter((o: any) => (filter ? o.status === filter : true))
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.row}
-      onPress={() => (navigation as any).navigate('WorkOrderDetail', { id: item.id })}
-    >
-      <View style={styles.rowLeft}>
-        <Circle size={10} color={STATUS_COLORS[item.status] || Colors.textMuted} fill={STATUS_COLORS[item.status]} />
-        <View style={styles.rowContent}>
-          <Text style={styles.rowTitle}>{item.client_name || 'Клиент'}</Text>
-          <Text style={styles.rowSubtitle}>
-            {item.vehicle_info || 'Авто'} · {formatDate(item.created_at)}
-          </Text>
+  const renderItem = ({ item }: { item: any }) => {
+    const clientName = item.client?.name || 'Клиент'
+    const vehicleInfo = item.vehicle
+      ? `${item.vehicle.make} ${item.vehicle.model}`
+      : 'Авто'
+    const serviceName = item.service?.name || ''
+    const totalCost = item.total_cost || 0
+
+    return (
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => (navigation as any).navigate('WorkOrderDetail', { id: item.id })}
+      >
+        <View style={styles.rowLeft}>
+          <Circle size={10} color={STATUS_COLORS[item.status] || Colors.textMuted} fill={STATUS_COLORS[item.status]} />
+          <View style={styles.rowContent}>
+            <Text style={styles.rowTitle}>{clientName}</Text>
+            <Text style={styles.rowSubtitle} numberOfLines={1}>
+              {vehicleInfo}
+              {serviceName ? ` · ${serviceName}` : ''}
+              {' · '}{formatDate(item.created_at)}
+            </Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.rowRight}>
-        <Text style={styles.rowPrice}>{formatCurrency(item.total || 0)}</Text>
-        <ChevronRight size={16} color={Colors.textMuted} />
-      </View>
-    </TouchableOpacity>
-  )
+        <View style={styles.rowRight}>
+          <Text style={styles.rowPrice}>{formatCurrency(totalCost)}</Text>
+          <ChevronRight size={16} color={Colors.textMuted} />
+        </View>
+      </TouchableOpacity>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -77,6 +88,7 @@ export function WorkOrdersScreen() {
           { key: 'pending', label: 'Ожидают' },
           { key: 'in_progress', label: 'В работе' },
           { key: 'completed', label: 'Выполнены' },
+          { key: 'cancelled', label: 'Отменены' },
         ].map((f) => (
           <TouchableOpacity
             key={f.label}

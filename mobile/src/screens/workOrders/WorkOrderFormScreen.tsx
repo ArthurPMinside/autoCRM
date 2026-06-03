@@ -17,6 +17,7 @@ import { workOrdersApi } from '../../api/workOrders'
 import { clientsApi } from '../../api/clients'
 import { vehiclesApi } from '../../api/vehicles'
 import { servicesApi } from '../../api/services'
+import { staffApi } from '../../api/staff'
 import { Colors } from '../../constants/colors'
 import { formatCurrency } from '../../utils/format'
 import VehicleSelector, { VehicleSelection } from '../../components/VehicleSelector'
@@ -31,7 +32,16 @@ import {
   Megaphone,
   ChevronRight,
   ChevronLeft,
+  Users,
+  Tag,
 } from 'lucide-react-native'
+
+const statusOptions = [
+  { value: 'pending', label: 'Ожидает', color: Colors.warning },
+  { value: 'in_progress', label: 'В работе', color: Colors.info },
+  { value: 'completed', label: 'Готово', color: Colors.success },
+  { value: 'cancelled', label: 'Отменено', color: Colors.danger },
+]
 
 export function WorkOrderFormScreen() {
   const route = useRoute() as any
@@ -61,9 +71,16 @@ export function WorkOrderFormScreen() {
     queryFn: () => servicesApi.getAll().then((r) => r.data),
   })
 
+  const { data: staffData } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => staffApi.getAll().then((r) => r.data),
+  })
+
   const [clientId, setClientId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
   const [serviceId, setServiceId] = useState('')
+  const [staffId, setStaffId] = useState('')
+  const [status, setStatus] = useState('pending')
   const [description, setDescription] = useState('')
   const [scheduledDate, setScheduledDate] = useState('')
   const [source, setSource] = useState('direct')
@@ -82,13 +99,17 @@ export function WorkOrderFormScreen() {
   const [clientModalOpen, setClientModalOpen] = useState(false)
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [sourceModalOpen, setSourceModalOpen] = useState(false)
+  const [staffModalOpen, setStaffModalOpen] = useState(false)
+  const [statusModalOpen, setStatusModalOpen] = useState(false)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
 
   useEffect(() => {
     if (existingOrder) {
-      setClientId(existingOrder.client_id || '')
-      setVehicleId(existingOrder.vehicle_id || '')
-      setServiceId(existingOrder.service_id || '')
+      setClientId(existingOrder.client?.id || existingOrder.client_id || '')
+      setVehicleId(existingOrder.vehicle?.id || existingOrder.vehicle_id || '')
+      setServiceId(existingOrder.service?.id || existingOrder.service_id || '')
+      setStaffId(existingOrder.staff_id || '')
+      setStatus(existingOrder.status || 'pending')
       setDescription(existingOrder.description || '')
       setScheduledDate(existingOrder.scheduled_date || '')
       setSource(existingOrder.source || 'direct')
@@ -151,6 +172,7 @@ export function WorkOrderFormScreen() {
     vehiclesData?.filter((v: any) => v.client_id === clientId) || []
   const selectedVehicle = vehiclesData?.find((v: any) => v.id === vehicleId)
   const selectedService = servicesData?.find((s: any) => s.id === serviceId)
+  const selectedStaff = staffData?.find((s: any) => s.id === staffId)
 
   // Auto-select vehicle if client has only one
   useEffect(() => {
@@ -159,7 +181,7 @@ export function WorkOrderFormScreen() {
     }
   }, [filteredVehicles, vehicleId])
 
-  const totalCost = selectedService?.price || 0
+  const totalCost = selectedService?.price || existingOrder?.service?.price || 0
 
   const handleSave = () => {
     const missing: string[] = []
@@ -175,9 +197,10 @@ export function WorkOrderFormScreen() {
       client_id: clientId,
       vehicle_id: vehicleId,
       service_id: serviceId,
+      staff_id: staffId || undefined,
+      status,
       description: description.trim() || undefined,
       scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
-      status: existingOrder?.status || 'pending',
       source,
     })
   }
@@ -411,11 +434,62 @@ export function WorkOrderFormScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Mechanic */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Users size={16} color={Colors.primary} />
+          <Text style={styles.sectionTitle}>Механик</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.selectBtn}
+          onPress={() => setStaffModalOpen(true)}
+        >
+          {selectedStaff ? (
+            <View>
+              <Text style={styles.selectValue}>{selectedStaff.name}</Text>
+              <Text style={styles.selectSubValue}>{selectedStaff.position || 'Механик'}</Text>
+            </View>
+          ) : (
+            <Text style={styles.selectPlaceholder}>Назначить механика</Text>
+          )}
+          <ChevronRight size={18} color={Colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Status */}
+      {orderId && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Tag size={16} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Статус</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.selectBtn}
+            onPress={() => setStatusModalOpen(true)}
+          >
+            <View style={styles.statusRow}>
+              <View
+                style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor: statusOptions.find((s) => s.value === status)?.color || Colors.textMuted,
+                  },
+                ]}
+              />
+              <Text style={styles.selectValue}>
+                {statusOptions.find((s) => s.value === status)?.label}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Scheduled date */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Calendar size={16} color={Colors.primary} />
-          <Text style={styles.sectionTitle}>Дата и время записи</Text>
+          <Text style={styles.sectionTitle}>Плановая дата готовности</Text>
         </View>
         <TouchableOpacity
           style={styles.selectBtn}
@@ -606,6 +680,90 @@ export function WorkOrderFormScreen() {
         </View>
       </Modal>
 
+      {/* Staff Picker Modal */}
+      <Modal visible={staffModalOpen} animationType="slide" transparent>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.sheet}>
+            <View style={modalStyles.header}>
+              <Text style={modalStyles.headerTitle}>Выберите механика</Text>
+              <TouchableOpacity onPress={() => setStaffModalOpen(false)}>
+                <X size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={staffData || []}
+              keyExtractor={(item: any) => item.id}
+              renderItem={({ item }: { item: any }) => (
+                <TouchableOpacity
+                  style={modalStyles.item}
+                  onPress={() => {
+                    setStaffId(item.id)
+                    setStaffModalOpen(false)
+                  }}
+                >
+                  <View>
+                    <Text style={modalStyles.itemText}>{item.name}</Text>
+                    <Text style={modalStyles.itemSub}>
+                      {item.position || 'Механик'}
+                    </Text>
+                  </View>
+                  {item.id === staffId && (
+                    <View style={modalStyles.check}>
+                      <Text style={{ color: Colors.white, fontSize: 12 }}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={modalStyles.empty}>Механики не найдены</Text>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Status Picker Modal */}
+      <Modal visible={statusModalOpen} animationType="slide" transparent>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.sheet}>
+            <View style={modalStyles.header}>
+              <Text style={modalStyles.headerTitle}>Выберите статус</Text>
+              <TouchableOpacity onPress={() => setStatusModalOpen(false)}>
+                <X size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={statusOptions}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={modalStyles.item}
+                  onPress={() => {
+                    setStatus(item.value)
+                    setStatusModalOpen(false)
+                  }}
+                >
+                  <View style={styles.statusRow}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: item.color },
+                      ]}
+                    />
+                    <Text style={modalStyles.itemText}>{item.label}</Text>
+                  </View>
+                  {item.value === status && (
+                    <View style={modalStyles.check}>
+                      <Text style={{ color: Colors.white, fontSize: 12 }}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* Source Picker Modal */}
       <Modal visible={sourceModalOpen} animationType="slide" transparent>
         <View style={modalStyles.overlay}>
@@ -726,6 +884,8 @@ const styles = StyleSheet.create({
   vehicleOptionActive: { borderColor: Colors.primary, backgroundColor: '#eff6ff' },
   vehicleOptionText: { fontSize: 14, color: Colors.text },
   vehicleOptionTextActive: { color: Colors.primary, fontWeight: '600' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statusDot: { width: 10, height: 10, borderRadius: 5 },
   repeatHint: { fontSize: 12, color: Colors.warning, marginTop: 6 },
   totalBox: {
     flexDirection: 'row',
