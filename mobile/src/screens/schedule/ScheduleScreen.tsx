@@ -16,7 +16,7 @@ import { staffApi } from '../../api/staff'
 import { settingsApi } from '../../api/settings'
 import { Colors } from '../../constants/colors'
 import { formatCurrency } from '../../utils/format'
-import { ChevronLeft, ChevronRight, Plus, Clock, User } from 'lucide-react-native'
+import { ChevronLeft, ChevronRight, Plus, Clock, User, Wallet } from 'lucide-react-native'
 
 const SLOT_MINUTES = 60
 const SLOT_HEIGHT = 60
@@ -165,15 +165,23 @@ export function ScheduleScreen() {
       const durationHours = order.service?.duration || 1
       const endMinutes = startMinutes + durationHours * 60
 
+      // Skip events completely outside working hours
+      if (endMinutes <= startHour * 60 || startMinutes >= endHour * 60) continue
+
+      // Clamp to working hours
+      const clampedStart = Math.max(startMinutes, startHour * 60)
+      const clampedEnd = Math.min(endMinutes, endHour * 60)
+      const clampedDuration = (clampedEnd - clampedStart) / 60
+
       result[dayIndex].push({
         ...order,
-        startMinutes,
-        endMinutes,
-        durationHours,
+        startMinutes: clampedStart,
+        endMinutes: clampedEnd,
+        durationHours: clampedDuration,
       })
     }
     return result
-  }, [orders, weekStart])
+  }, [orders, weekStart, startHour, endHour])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -221,6 +229,16 @@ export function ScheduleScreen() {
     }).length
   }, [orders, weekStart])
 
+  const weekRevenue = useMemo(() => {
+    if (!orders) return 0
+    return orders.filter((o: any) => {
+      if (!o.scheduled_date) return false
+      if (o.status === 'cancelled') return false
+      const d = new Date(o.scheduled_date)
+      return d >= weekStart && d < addDays(weekStart, 7)
+    }).reduce((sum: number, o: any) => sum + (o.total_cost || 0), 0)
+  }, [orders, weekStart])
+
   const handleSlotPress = (dayIndex: number, time: string) => {
     const slotDate = addDays(weekStart, dayIndex)
     const [slotHour] = time.split(':').map(Number)
@@ -253,18 +271,13 @@ export function ScheduleScreen() {
 
   const dayOrdersWithOverlap = useMemo(() => {
     if (!dayOrders) return []
-    return dayOrders.map((order, i) => {
-      const overlapping = dayOrders.filter((o, j) => {
-        if (i === j) return false
-        return o.startMinutes < order.endMinutes && o.endMinutes > order.startMinutes
-      })
-      const group = [order, ...overlapping].sort((a, b) => a.startMinutes - b.startMinutes)
-      const overlapCount = group.length
-      const overlapIndex = group.findIndex(
-        (o) => o.id === order.id && o.startMinutes === order.startMinutes
-      )
-      return { ...order, overlapCount, overlapIndex }
-    })
+    const sorted = [...dayOrders].sort((a, b) => a.startMinutes - b.startMinutes)
+    const count = sorted.length
+    return sorted.map((order, i) => ({
+      ...order,
+      overlapCount: count,
+      overlapIndex: i,
+    }))
   }, [dayOrders])
 
   const scheduleHeight = (endHour - startHour) * SLOT_HEIGHT
@@ -307,6 +320,12 @@ export function ScheduleScreen() {
         <View style={styles.weekInfo}>
           <Text style={styles.weekRange}>{formatWeekRange(weekStart)}</Text>
           <Text style={styles.weekCount}>{weekOrderCount} записей на неделе</Text>
+          {weekRevenue > 0 && (
+            <View style={styles.weekRevenueRow}>
+              <Wallet size={12} color={Colors.success} />
+              <Text style={styles.weekRevenueText}>{formatCurrency(weekRevenue)}</Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity
           style={styles.navBtn}
@@ -360,15 +379,21 @@ export function ScheduleScreen() {
                   <Text style={styles.dayBadgeText}>{dayOrders.length}</Text>
                 </View>
               )}
+              {(() => {
+                const dayRevenue = dayOrders.reduce((sum: number, o: ScheduledOrder) => sum + (o.total_cost || 0), 0)
+                return dayRevenue > 0 ? (
+                  <Text style={styles.dayRevenue} numberOfLines={1}>{formatCurrency(dayRevenue)}</Text>
+                ) : null
+              })()}
             </TouchableOpacity>
           )
         })}
       </ScrollView>
 
       {/* Schedule Grid */}
-      <View style={styles.scheduleGrid}>
+      <View style={[styles.scheduleGrid, { height: scheduleHeight }]}>
         {/* Time labels column */}
-        <View style={styles.timeColumn}>
+        <View style={[styles.timeColumn, { height: scheduleHeight }]}>
           {timeSlots.map((time) => (
             <View key={time} style={[styles.timeCell, { height: SLOT_HEIGHT }]}>
               <Clock size={14} color={Colors.textMuted} />
@@ -378,7 +403,7 @@ export function ScheduleScreen() {
         </View>
 
         {/* Orders column */}
-        <View style={[styles.ordersColumn, { height: scheduleHeight }]}>
+        <View style={[styles.ordersColumn, { height: scheduleHeight }]} collapsable={false}>
           {/* Hour grid lines */}
           {timeSlots.map((time, index) => (
             <View
@@ -413,8 +438,15 @@ export function ScheduleScreen() {
             const colors = isOverlapping
               ? getOverlapColor(order.overlapIndex || 0)
               : getStatusColor(order.status)
-            const top = ((order.startMinutes - startHour * 60) / 60) * SLOT_HEIGHT
-            const height = order.durationHours * SLOT_HEIGHT
+
+            // Clamp top and height to stay within schedule grid
+            const rawTop = ((order.startMinutes - startHour * 60) / 60) * SLOT_HEIGHT
+            const top = Math.max(0, Math.min(rawTop, scheduleHeight - 20))
+
+            const rawHeight = order.durationHours * SLOT_HEIGHT
+            const maxHeight = scheduleHeight - top
+            const height = Math.max(20, Math.min(rawHeight, maxHeight))
+
             const overlapCount = order.overlapCount || 1
             const overlapIndex = order.overlapIndex || 0
             const leftPct = (overlapIndex / overlapCount) * 100 + 0.5
@@ -540,6 +572,13 @@ const styles = StyleSheet.create({
   weekInfo: { alignItems: 'center' },
   weekRange: { fontSize: 16, fontWeight: '600', color: Colors.text },
   weekCount: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+  weekRevenueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  weekRevenueText: { fontSize: 13, fontWeight: '700', color: Colors.success },
   daySelector: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -580,6 +619,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayBadgeText: { color: Colors.white, fontSize: 10, fontWeight: '700' },
+  dayRevenue: {
+    position: 'absolute',
+    bottom: 2,
+    fontSize: 9,
+    fontWeight: '600',
+    color: Colors.success,
+    width: '100%',
+    textAlign: 'center',
+  },
   scheduleGrid: {
     marginHorizontal: 16,
     marginTop: 8,
@@ -605,6 +653,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderTopRightRadius: 10,
     borderBottomRightRadius: 10,
+    overflow: 'hidden',
   },
   gridLine: {
     position: 'absolute',

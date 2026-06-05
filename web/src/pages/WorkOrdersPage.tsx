@@ -231,6 +231,12 @@ export default function WorkOrdersPage() {
                       {order.scheduled_date ? new Date(order.scheduled_date).toLocaleDateString('ru-RU') : '-'}
                     </span>
                   </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Дата и время записи:</span>
+                    <span className="ml-2 text-gray-900 dark:text-gray-100">
+                      {order.created_at ? new Date(order.created_at).toLocaleDateString('ru-RU') : '-'}
+                    </span>
+                  </div>
                   <div className="col-span-2">
                     <span className="text-gray-500 dark:text-gray-400">Механик:</span>
                     <select
