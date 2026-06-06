@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import auth, clients, vehicles, services, work_orders, finance, warehouse, analytics, dashboard, staff, sms, receipts, telegram, catalog, settings
 from app.db.database import engine, Base
+from app.core.seed import seed_catalog
 import uvicorn
 
 app = FastAPI(
@@ -19,6 +20,7 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+seed_catalog()
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(clients.router, prefix="/api/v1/clients", tags=["clients"])

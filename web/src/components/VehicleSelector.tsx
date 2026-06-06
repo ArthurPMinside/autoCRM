@@ -90,80 +90,117 @@ export default function VehicleSelector({ value, onChange }: Props) {
         year,
       })
     }
-  }, [makeId, modelId, generationId, makes, models, generations])
+  }, [makeId, modelId, generationId, makes, models, generations, onChange, value])
+
+  const catalogEmpty = !makesLoading && Array.isArray(makes) && makes.length === 0
 
   const selectCls =
     'w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100 disabled:opacity-50'
 
   return (
     <div className="space-y-3">
+      {catalogEmpty && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+          Каталог автомобилей недоступен. Введите данные вручную.
+        </p>
+      )}
+
       <div>
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Марка</label>
-        <select
-          value={makeId}
-          onChange={(e) => setMakeId(Number(e.target.value) || '')}
-          disabled={makesLoading}
-          className={selectCls}
-        >
-          <option value="">Выберите марку</option>
-          {makes?.map((make) => (
-            <option key={make.id} value={make.id}>
-              {make.name}
-            </option>
-          ))}
-        </select>
+        {catalogEmpty ? (
+          <input
+            value={value.make}
+            onChange={(e) => onChange({ ...value, make: e.target.value })}
+            className={selectCls}
+            placeholder="Например: Toyota"
+          />
+        ) : (
+          <select
+            value={makeId}
+            onChange={(e) => setMakeId(Number(e.target.value) || '')}
+            disabled={makesLoading}
+            className={selectCls}
+          >
+            <option value="">Выберите марку</option>
+            {makes?.map((make) => (
+              <option key={make.id} value={make.id}>
+                {make.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div>
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Модель</label>
-        <select
-          value={modelId}
-          onChange={(e) => setModelId(Number(e.target.value) || '')}
-          disabled={!makeId || modelsLoading}
-          className={selectCls}
-        >
-          <option value="">Выберите модель</option>
-          {models?.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
-        </select>
+        {catalogEmpty ? (
+          <input
+            value={value.model}
+            onChange={(e) => onChange({ ...value, model: e.target.value })}
+            className={selectCls}
+            placeholder="Например: Camry"
+          />
+        ) : (
+          <select
+            value={modelId}
+            onChange={(e) => setModelId(Number(e.target.value) || '')}
+            disabled={!makeId || modelsLoading}
+            className={selectCls}
+          >
+            <option value="">Выберите модель</option>
+            {models?.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div>
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Поколение</label>
-        <select
-          value={generationId}
-          onChange={(e) => setGenerationId(Number(e.target.value) || '')}
-          disabled={!modelId || generationsLoading}
-          className={selectCls}
-        >
-          <option value="">Выберите поколение</option>
-          {generations?.map((gen) => (
-            <option key={gen.id} value={gen.id}>
-              {gen.name} {gen.year_from ? `(${gen.year_from}${gen.year_to ? `–${gen.year_to}` : ''})` : ''}
-            </option>
-          ))}
-        </select>
+        {catalogEmpty ? (
+          <input
+            value={value.year ? String(value.year) : ''}
+            onChange={(e) => onChange({ ...value, year: Number(e.target.value) || new Date().getFullYear() })}
+            className={selectCls}
+            placeholder="Год выпуска"
+          />
+        ) : (
+          <select
+            value={generationId}
+            onChange={(e) => setGenerationId(Number(e.target.value) || '')}
+            disabled={!modelId || generationsLoading}
+            className={selectCls}
+          >
+            <option value="">Выберите поколение</option>
+            {generations?.map((gen) => (
+              <option key={gen.id} value={gen.id}>
+                {gen.name} {gen.year_from ? `(${gen.year_from}${gen.year_to ? `–${gen.year_to}` : ''})` : ''}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Кузов</label>
-        <select
-          value={bodyId}
-          onChange={(e) => setBodyId(Number(e.target.value) || '')}
-          disabled={!generationId || bodiesLoading}
-          className={selectCls}
-        >
-          <option value="">Выберите кузов</option>
-          {bodies?.map((body) => (
-            <option key={body.id} value={body.id}>
-              {body.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {!catalogEmpty && (
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Кузов</label>
+          <select
+            value={bodyId}
+            onChange={(e) => setBodyId(Number(e.target.value) || '')}
+            disabled={!generationId || bodiesLoading}
+            className={selectCls}
+          >
+            <option value="">Выберите кузов</option>
+            {bodies?.map((body) => (
+              <option key={body.id} value={body.id}>
+                {body.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div>
