@@ -9,7 +9,8 @@ from app.models.base import Base
 from app.models import vehicle_catalog  # noqa: F401
 from app.models import settings  # noqa: F401
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./autocrm.db")
+# Use plain sqlite (not aiosqlite) for sync SQLAlchemy engine
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./autocrm.db").replace("sqlite+aiosqlite://", "sqlite://")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
