@@ -9,7 +9,6 @@ app = FastAPI(
     title="autoCRM API",
     description="CRM для автосервисов",
     version="1.1.0",
-    redirect_slashes=False,
 )
 
 app.add_middleware(
