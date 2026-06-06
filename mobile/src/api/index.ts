@@ -1,17 +1,11 @@
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Platform } from 'react-native'
+import { API_BASE_URL } from '../constants/config'
 
-// Определяем базовый URL API
-// В вебе используем LAN IP для доступа с любого устройства в сети
-const API_URL =
-  (process.env.API_URL as string) ||
-  (Platform.OS === 'web'
-    ? 'http://192.168.1.15:8001/api/v1'
-    : 'http://10.0.2.2:8001/api/v1')
-
+// Production API URL: https://crmio.ru/api/v1
+// For local dev override: API_URL=http://10.0.2.2:8001/api/v1 npx expo start
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

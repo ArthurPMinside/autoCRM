@@ -30,10 +30,11 @@ module.exports = {
       // Укажите здесь URL бэкенда или задайте через переменную окружения API_URL
       // Android эмулятор: http://10.0.2.2:8001/api/v1
       // iOS симулятор:   http://localhost:8001/api/v1
-      // Реальное устройство: http://ВАШ_LAN_IP:8001/api/v1
+      // Реальное устройство в LAN: http://192.168.x.x:8001/api/v1
+      // Production:       https://crmio.ru/api/v1
       apiUrl:
         process.env.API_URL ||
-        'http://10.0.2.2:8001/api/v1',
+        'https://crmio.ru/api/v1',
     },
   },
 }

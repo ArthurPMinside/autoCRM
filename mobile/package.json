@@ -48,7 +48,10 @@
     "start:android-device": "API_URL=http://$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}'):8001/api/v1 expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:apk:prod": "eas build --platform android --profile preview --non-interactive",
+    "build:apk:local": "API_URL=https://crmio.ru/api/v1 expo prebuild --platform android && cd android && ./gradlew assembleRelease"
   },
   "private": true
 }

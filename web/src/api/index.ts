@@ -1,7 +1,9 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:8001/api/v1',
+  // Relative URL — Nginx proxies /api/ to backend
+  // Works for both IP (http://185.146.157.183) and domain (https://crmio.ru)
+  baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
