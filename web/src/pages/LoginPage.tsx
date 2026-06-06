@@ -82,7 +82,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
-            <p>Демо: admin@autocrm.ru / admin123</p>
+            <p>CRM для автосервиса</p>
           </div>
         </div>
       </div>
