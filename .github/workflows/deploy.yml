@@ -1,0 +1,58 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to VDS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          # Или используйте key вместо password:
+          # key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
+            
+            # Переходим в папку проекта (создаём если нет)
+            mkdir -p /opt/autoCRM
+            cd /opt/autoCRM
+            
+            # Если папка пустая — клонируем, иначе pull
+            if [ ! -d .git ]; then
+              echo "📦 First clone..."
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              echo "🔄 Pulling latest changes..."
+              git fetch origin
+              git reset --hard origin/main
+            fi
+            
+            # Создаём .env если его нет
+            if [ ! -f .env ]; then
+              echo "⚙️  Creating .env from example..."
+              cp .env.example .env
+              echo "   ⚠️  IMPORTANT: Please edit /opt/autoCRM/.env and set a strong SECRET_KEY!"
+            fi
+            
+            # Создаём папку для данных
+            mkdir -p data
+            
+            # Деплой
+            echo "🐳 Building and starting containers..."
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml up -d
+            
+            # Очистка
+            docker system prune -f
+            
+            echo "✅ Deployment complete!"
+            docker compose -f docker-compose.prod.yml ps
