@@ -21,7 +21,7 @@ export default function VehicleSelector({ value, onChange }: Props) {
   const [generationId, setGenerationId] = useState<number | ''>('')
   const [bodyId, setBodyId] = useState<number | ''>('')
 
-  const { data: makes, isLoading: makesLoading } = useQuery({
+  const { data: makes, isLoading: makesLoading, error: makesError } = useQuery({
     queryKey: ['catalog', 'makes'],
     queryFn: async () => {
       const res = await catalogApi.getMakes()
@@ -92,16 +92,18 @@ export default function VehicleSelector({ value, onChange }: Props) {
     }
   }, [makeId, modelId, generationId, makes, models, generations, onChange, value])
 
-  const catalogEmpty = !makesLoading && Array.isArray(makes) && makes.length === 0
+  const catalogEmpty = !makesLoading && (!makes || makes.length === 0)
 
   const selectCls =
     'w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:text-gray-100 disabled:opacity-50'
 
   return (
     <div className="space-y-3">
-      {catalogEmpty && (
+      {(catalogEmpty || makesError) && (
         <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
-          Каталог автомобилей недоступен. Введите данные вручную.
+          {makesError
+            ? 'Не удалось загрузить каталог. Вы можете ввести данные вручную.'
+            : 'Каталог автомобилей недоступен. Введите данные вручную.'}
         </p>
       )}
 
