@@ -23,8 +23,8 @@ def seed():
     
     # Admin user
     admin = User(
-        email="admin@autocrm.ru",
-        hashed_password=get_password_hash("admin123"),
+        email="artur@crmio.ru",
+        hashed_password=get_password_hash("Xk9#mP2$vL7@qR4"),
         name="Администратор",
         is_admin=True,
     )
