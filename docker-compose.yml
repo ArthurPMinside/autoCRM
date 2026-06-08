@@ -15,10 +15,6 @@ services:
   frontend:
     build: ./web
     ports:
-      - "3000:3000"
-    volumes:
-      - ./web:/app
-      - /app/node_modules
-    command: npm run dev
-    environment:
-      - VITE_API_URL=http://localhost:8001/api/v1
+      - "80:80"
+    depends_on:
+      - backend

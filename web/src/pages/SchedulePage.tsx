@@ -142,7 +142,7 @@ export default function SchedulePage() {
       if (order.status === 'cancelled') continue
 
       const orderDate = new Date(order.scheduled_date)
-      const startMinutes = orderDate.getHours() * 60 + orderDate.getMinutes()
+      const startMinutes = orderDate.getUTCHours() * 60 + orderDate.getUTCMinutes()
       const durationHours = order.service?.duration || 1
       const totalDurationMinutes = durationHours * 60
 

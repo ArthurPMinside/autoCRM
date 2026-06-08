@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.api.v1 import auth, clients, vehicles, services, work_orders, finance, warehouse, analytics, dashboard, staff, sms, receipts, telegram, catalog, settings
 from app.db.database import engine, Base
 from app.core.seed import seed_catalog
@@ -18,6 +20,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
 Base.metadata.create_all(bind=engine)
 seed_catalog()
